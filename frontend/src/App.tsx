@@ -12,17 +12,17 @@ import { PersonalDev } from "./pages/PersonalDev";
 function LiquidGlassFilter() {
   return (
     <svg style={{ display: "none" }}>
-      <filter id="liquidGlass">
+      <filter id="displacementFilter">
         <feTurbulence
           type="turbulence"
-          baseFrequency="0.015"
-          numOctaves="3"
+          baseFrequency="0.01"
+          numOctaves="2"
           result="turbulence"
         />
         <feDisplacementMap
           in="SourceGraphic"
           in2="turbulence"
-          scale="8"
+          scale="200"
           xChannelSelector="R"
           yChannelSelector="G"
         />
