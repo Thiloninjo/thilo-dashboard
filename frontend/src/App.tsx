@@ -52,7 +52,7 @@ export default function App() {
         onSelect={handleNavSelect}
         onDragProgress={handleNavDrag}
       />
-      <main className="w-full">
+      <main className="w-full" style={{ overflow: "visible" }}>
         <PageSwiper
           activeIndex={activeIndex}
           dragProgress={dragProgress}
