@@ -114,9 +114,13 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
         initial={{ opacity: 1, height: "auto" }}
         exit={{ opacity: 0, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0, overflow: "hidden" }}
         transition={{ duration: 0.4, ease: "easeInOut" }}
-        className={`flex items-center gap-2.5 py-2.5 px-3 rounded-xl hover:bg-white/8 transition-colors cursor-pointer ${
-          overdue ? "bg-red-500/15 border border-red-400/20" : ""
-        }`}
+        className="flex items-center gap-2.5 py-2.5 px-3 rounded-2xl hover:bg-white/12 transition-colors cursor-pointer"
+        style={{
+          background: overdue ? "rgba(239,68,58,0.12)" : "rgba(255,255,255,0.06)",
+          border: overdue ? "1px solid rgba(239,68,58,0.25)" : "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
+          marginBottom: "4px",
+        }}
       >
         <Checkbox
           checked={false}
@@ -147,8 +151,8 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
           <div className="flex items-baseline gap-1">
             <motion.span
               key={completed}
-              initial={{ scale: 1.3, color: "#10b981" }}
-              animate={{ scale: 1, color: "#a5b4fc" }}
+              initial={{ scale: 1.3, color: "#7DFFAA" }}
+              animate={{ scale: 1, color: "#FFFFFF" }}
               transition={{ duration: 0.3 }}
               className="text-[28px] font-extrabold text-white"
             >
@@ -170,17 +174,22 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
           <div className="mb-2">
             <button
               onClick={() => setOverdueOpen(!overdueOpen)}
-              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-danger/8 border border-danger/15 hover:bg-danger/12 transition-colors"
+              className="flex items-center gap-2 w-full px-4 py-3 rounded-2xl hover:bg-red-500/20 transition-colors"
+              style={{
+                background: "rgba(239,68,58,0.12)",
+                border: "1px solid rgba(239,68,58,0.25)",
+                boxShadow: "0 2px 8px rgba(239,68,58,0.1), inset 0 1px 0 rgba(255,255,255,0.05)",
+              }}
             >
               <motion.span
                 animate={{ rotate: overdueOpen ? 90 : 0 }}
                 transition={{ duration: 0.2 }}
-                className="text-[10px] text-danger"
+                className="text-xs text-white"
               >
                 ▶
               </motion.span>
-              <span className="text-sm font-bold text-danger">Überfällig</span>
-              <span className="text-xs text-danger/70 font-semibold ml-auto">{overdueTasks.length} Tasks</span>
+              <span className="text-sm font-bold text-white">⚠ Überfällig</span>
+              <span className="text-xs text-red-300 font-semibold ml-auto">{overdueTasks.length} Tasks</span>
             </button>
             <AnimatePresence>
               {overdueOpen && (
@@ -191,7 +200,7 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
                   transition={{ duration: 0.2 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-1">
+                  <div className="mt-2 flex flex-col gap-1">
                     <AnimatePresence mode="popLayout">
                       {overdueTasks.map((task) => (
                         <TaskRow key={`${task.source}-${task.id}`} task={task} />

@@ -39,9 +39,13 @@ export function HabitsCard({ habits, onScore }: Props) {
         {habits.map((habit) => (
           <div
             key={habit.id}
-            className={`flex items-center gap-2.5 p-2.5 rounded-xl transition-colors ${
-              habit.isAntiHabit ? "hover:bg-danger/8" : "hover:bg-white/8"
-            }`}
+            className="flex items-center gap-2.5 p-3 rounded-2xl transition-colors hover:bg-white/12"
+            style={{
+              background: habit.isAntiHabit ? "rgba(239,68,58,0.08)" : "rgba(255,255,255,0.06)",
+              border: habit.isAntiHabit ? "1px solid rgba(239,68,58,0.15)" : "1px solid rgba(255,255,255,0.08)",
+              boxShadow: "0 2px 6px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
+              marginBottom: "4px",
+            }}
           >
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center text-[14px] flex-shrink-0 transition-colors ${

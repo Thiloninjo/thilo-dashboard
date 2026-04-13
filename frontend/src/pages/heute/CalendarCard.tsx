@@ -20,9 +20,16 @@ export function CalendarCard({ events }: { events: CalendarEvent[] }) {
         {events.map((event) => (
           <div
             key={event.id}
-            className={`flex items-start gap-3 p-3 rounded-xl border-l-[3px] ${
-              isNext(event) ? "bg-white/8 border-l-accent" : "bg-white/3 border-l-white/20"
+            className={`flex items-start gap-3 p-3 rounded-2xl border-l-[3px] ${
+              isNext(event) ? "border-l-white/80" : "border-l-white/30"
             }`}
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderLeftWidth: "3px",
+              borderLeftColor: isNext(event) ? "rgba(255,255,255,0.8)" : "rgba(255,255,255,0.3)",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.1)",
+            }}
           >
             <span className={`text-sm font-bold min-w-[44px] ${isNext(event) ? "text-accent-light" : "text-white/70"}`}>
               {event.isAllDay ? "Ganztag" : formatTime(event.start)}
