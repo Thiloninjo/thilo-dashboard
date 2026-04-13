@@ -219,29 +219,7 @@ export function SOPs() {
             onClick={() => openWorkspace(ws.name)}
             className="relative cursor-pointer group"
           >
-            {/* Character image — clip bottom to panel edge, head sticks out top */}
-            {workspaceImages[ws.name] && (
-              <div
-                className="absolute z-20 pointer-events-none"
-                style={{
-                  bottom: "0px",
-                  top: "auto",
-                  // Clip: allow overflow at top (heads), but cut at bottom of panel
-                  clipPath: "inset(-100px 0 0 0)",
-                  ...(ws.name === "Tennis-Ring-Lual"
-                    ? { right: "5%", left: "auto" }
-                    : { right: "10%", left: "auto" }),
-                }}
-              >
-                <img
-                  src={workspaceImages[ws.name]}
-                  alt={ws.name}
-                  className="drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300"
-                  style={{ height: "330px" }}
-                />
-              </div>
-            )}
-            {/* Glass card */}
+            {/* Glass card — clips sides and bottom via clip-path, top is open for heads */}
             <div
               className="relative rounded-3xl h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
               style={{
@@ -250,9 +228,24 @@ export function SOPs() {
                 background: "rgba(255,255,255,0.1)",
                 border: "1px solid rgba(255,255,255,0.2)",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.25), inset 0 0 20px -5px rgba(255,255,255,0.2)",
-                overflow: "hidden",
+                clipPath: "inset(-80px 0 0 0 round 0px 0px 24px 24px)",
               }}
             >
+              {/* Character image — inside panel, bottom-aligned, head extends above */}
+              {workspaceImages[ws.name] && (
+                <img
+                  src={workspaceImages[ws.name]}
+                  alt={ws.name}
+                  className="absolute pointer-events-none drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300"
+                  style={{
+                    height: "330px",
+                    bottom: "0px",
+                    ...(ws.name === "Tennis-Ring-Lual"
+                      ? { right: "5%" }
+                      : { right: "10%" }),
+                  }}
+                />
+              )}
               {/* Text overlay at bottom */}
               <div
                 className="absolute bottom-0 left-0 right-0 px-6 py-5 z-10"
