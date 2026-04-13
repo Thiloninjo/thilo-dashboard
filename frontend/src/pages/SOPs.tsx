@@ -208,31 +208,32 @@ export function SOPs() {
             onClick={() => openWorkspace(ws.name)}
             className="relative cursor-pointer group"
           >
-            {/* Glass card */}
+            {/* Glass card — overflow visible for heads sticking out */}
             <div
               className="liquid-glass relative h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
               style={{
-                clipPath: "inset(-80px 0 0 0 round 0px 0px 28px 28px)",
+                overflow: "visible",
+                clipPath: "inset(-80px -10px 0 -10px round 0px 0px 28px 28px)",
               }}
             >
-              {/* Character image — inside panel, bottom-aligned, head extends above */}
+              {/* Character image — bottom-aligned, head extends above panel */}
               {workspaceImages[ws.name] && (
                 <img
                   src={workspaceImages[ws.name]}
                   alt={ws.name}
-                  className="absolute pointer-events-none drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300"
+                  className="absolute pointer-events-none drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300 z-[5]"
                   style={{
                     height: "330px",
                     bottom: "0px",
                     ...(ws.name === "Tennis-Ring-Lual"
-                      ? { right: "5%" }
-                      : { right: "10%" }),
+                      ? { right: "8%" }
+                      : { right: "12%" }),
                   }}
                 />
               )}
               {/* Text overlay at bottom */}
               <div
-                className="absolute bottom-0 left-0 right-0 px-6 py-5 z-10"
+                className="absolute bottom-0 left-0 right-0 px-6 py-5 z-10 rounded-b-[28px]"
                 style={{
                   background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)",
                 }}
