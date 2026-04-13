@@ -8,7 +8,10 @@ export function ChangeLog() {
   const [filter, setFilter] = useState("");
 
   useEffect(() => {
-    apiFetch<CachedResponse<ChangeLogEntry[]>>("/changelog").then((r) => setEntries(r.data)).catch(() => {});
+    const fetch = () => apiFetch<CachedResponse<ChangeLogEntry[]>>("/changelog").then((r) => setEntries(r.data)).catch(() => {});
+    fetch();
+    const interval = setInterval(fetch, 10_000);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = filter ? entries.filter((e) => e.sopName.toLowerCase().includes(filter.toLowerCase())) : entries;

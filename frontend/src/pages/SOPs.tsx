@@ -102,7 +102,10 @@ export function SOPs() {
   const [detail, setDetail] = useState<SOPDetail | null>(null);
 
   useEffect(() => {
-    apiFetch<CachedResponse<Workspace[]>>("/sops").then((r) => setWorkspaces(r.data)).catch(() => {});
+    const fetch = () => apiFetch<CachedResponse<Workspace[]>>("/sops").then((r) => setWorkspaces(r.data)).catch(() => {});
+    fetch();
+    const interval = setInterval(fetch, 10_000);
+    return () => clearInterval(interval);
   }, []);
 
   async function openWorkspace(name: string) {
