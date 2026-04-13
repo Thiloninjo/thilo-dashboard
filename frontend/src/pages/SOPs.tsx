@@ -212,32 +212,40 @@ export function SOPs() {
     <>
       <h2 className="text-2xl font-bold mb-2 text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>SOPs</h2>
       <p className="text-white/50 text-sm mb-6 font-medium" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}>Wähle einen Workspace</p>
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 gap-6 mt-16" style={{ overflow: "visible" }}>
         {workspaces.map((ws) => (
           <div
             key={ws.name}
             onClick={() => openWorkspace(ws.name)}
             className="relative cursor-pointer group"
           >
-            {/* Glass card */}
+            {/* Character image — positioned OUTSIDE overflow, head sticks out */}
+            {workspaceImages[ws.name] && (
+              <img
+                src={workspaceImages[ws.name]}
+                alt={ws.name}
+                className="absolute z-20 pointer-events-none drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300"
+                style={{
+                  height: "330px",
+                  bottom: "-6px",
+                  ...(ws.name === "Tennis-Ring-Lual"
+                    ? { right: "5%", left: "auto", transform: "none" }
+                    : { right: "15%", left: "auto", transform: "none" }),
+                }}
+              />
+            )}
+            {/* Glass card — overflow visible so heads stick out */}
             <div
-              className="relative overflow-hidden rounded-3xl h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
+              className="relative rounded-3xl h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
               style={{
                 backdropFilter: "blur(20px) saturate(180%)",
                 WebkitBackdropFilter: "blur(20px) saturate(180%)",
                 background: "rgba(255,255,255,0.1)",
                 border: "1px solid rgba(255,255,255,0.2)",
                 boxShadow: "0 8px 32px rgba(0,0,0,0.25), inset 0 0 20px -5px rgba(255,255,255,0.2)",
+                overflow: "hidden",
               }}
             >
-              {/* Character image — inside the panel, bottom-aligned, head sticks out top */}
-              {workspaceImages[ws.name] && (
-                <img
-                  src={workspaceImages[ws.name]}
-                  alt={ws.name}
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[320px] object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300 pointer-events-none"
-                />
-              )}
               {/* Text overlay at bottom */}
               <div
                 className="absolute bottom-0 left-0 right-0 px-6 py-5 z-10"
