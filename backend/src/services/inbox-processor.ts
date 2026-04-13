@@ -16,11 +16,10 @@ interface Intent {
 const TODAY = () => new Date().toISOString().slice(0, 10);
 const NOW_TIME = () => new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
-async function detectIntent(text: string): Promise<Intent> {
+async function detectIntents(text: string): Promise<Intent[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    // Fallback: treat as note
-    return { type: "note", title: text };
+    return [{ type: "note", title: text }];
   }
 
   const anthropic = new Anthropic({ apiKey });
@@ -30,10 +29,12 @@ async function detectIntent(text: string): Promise<Intent> {
 
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
-    max_tokens: 300,
+    max_tokens: 500,
     messages: [{
       role: "user",
-      content: `Du bist ein Intent-Parser. Analysiere diese Spracheingabe und gib NUR ein JSON-Objekt zurück, nichts anderes.
+      content: `Du bist ein Intent-Parser. Analysiere diese Spracheingabe und gib ein JSON-ARRAY zurück.
+
+Die Eingabe kann MEHRERE Aktionen enthalten! "Ich muss Blumen gießen und um 18 Uhr ins Gym" = 2 Intents.
 
 Heutiges Datum: ${today}
 Aktuelle Uhrzeit: ${now}
@@ -43,51 +44,51 @@ Eingabe: "${text}"
 Mögliche Intents:
 - "task": Etwas das erledigt werden muss (To-Do, Aufgabe, "ich muss noch...")
 - "calendar": Ein Termin mit Zeit/Datum (Meeting, Arzt, Fitnessstudio, Event)
-- "complete": Etwas wurde erledigt/abgehakt ("hab X gemacht", "X erledigt", "X fertig")
+- "complete": Etwas wurde erledigt/abgehakt ("hab X gemacht", "X erledigt", "X fertig", "X genommen")
 - "delete": Etwas soll gelöscht/entfernt werden ("lösch X", "nimm X raus", "X absagen")
 - "note": Alles andere (Idee, Erkenntnis, Reflexion, unklar)
 
-Antworte NUR mit diesem JSON-Format:
-{"type":"...","title":"kurzer sauberer Titel","date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"Suchbegriff fuer complete/delete"}
+Antworte NUR mit einem JSON-Array:
+[{"type":"...","title":"kurzer sauberer Titel","date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"Suchbegriff fuer complete/delete"}]
 
 Regeln:
+- IMMER ein Array zurückgeben, auch bei nur einem Intent: [{"type":"task",...}]
 - "title": Kurz und sauber, ohne Füllwörter. "Ich muss heute noch Blumen gießen" → "Blumen gießen"
 - "date": Wenn kein Datum genannt, nimm heute (${today}). "morgen" = nächster Tag. "Montag" = nächster Montag.
 - "time": Nur wenn eine Uhrzeit genannt wird. "um 18" = "18:00". Keine Zeit → weglassen.
 - "searchTerm": Bei complete/delete: der Name der Task/des Termins zum Suchen. "Hab Planks gemacht" → "Plank"
-- Bei "note": title = der originale Text, kein date/time nötig.
-- Wenn jemand sagt "ich muss X" oder "X nicht vergessen" → das ist ein "task", kein "note"
+- Wenn jemand sagt "ich muss X" oder "X nicht vergessen" → "task", nicht "note"
 - "Fitnessstudio um 18" → "calendar" mit time "18:00"
+- Mehrere Aktionen in einer Eingabe → mehrere Objekte im Array
 
-NUR JSON, kein anderer Text.`
+NUR JSON-Array, kein anderer Text.`
     }],
   });
 
   try {
     const content = response.content[0];
-    if (content.type !== "text") {
-      console.log("[Inbox AI] No text content returned");
-      return { type: "note", title: text };
-    }
+    if (content.type !== "text") return [{ type: "note", title: text }];
 
-    console.log("[Inbox AI] Raw response:", content.text);
-    // Extract JSON from response (might have markdown code fences)
+    console.log("[Inbox AI] Raw:", content.text);
     let jsonStr = content.text.trim();
-    const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
-    if (jsonMatch) jsonStr = jsonMatch[0];
+    // Extract JSON array from response
+    const arrMatch = jsonStr.match(/\[[\s\S]*\]/);
+    if (arrMatch) jsonStr = arrMatch[0];
 
-    const json = JSON.parse(jsonStr);
-    console.log("[Inbox AI] Parsed:", json);
-    return {
+    const arr = JSON.parse(jsonStr);
+    if (!Array.isArray(arr) || arr.length === 0) return [{ type: "note", title: text }];
+
+    console.log("[Inbox AI] Parsed:", arr.length, "intents");
+    return arr.map((json: any) => ({
       type: json.type || "note",
       title: json.title || text,
       time: json.time || undefined,
       date: json.date || TODAY(),
       searchTerm: json.searchTerm || json.title || text,
-    };
+    }));
   } catch (err) {
     console.error("[Inbox AI] Parse error:", err);
-    return { type: "note", title: text };
+    return [{ type: "note", title: text }];
   }
 }
 
@@ -274,65 +275,72 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
 // === Main Processor ===
 
 export interface InboxResult {
-  intent: Intent;
+  intents: Intent[];
+  results: { intent: Intent; success: boolean; message: string }[];
   success: boolean;
   message: string;
 }
 
-export async function processInboxMessage(text: string): Promise<InboxResult> {
-  const intent = await detectIntent(text);
-
+async function executeIntent(intent: Intent): Promise<{ success: boolean; message: string }> {
   switch (intent.type) {
     case "task": {
       const result = await createTodoistTask(intent.title, intent.date || TODAY(), intent.time);
       return {
-        intent,
         success: result.success,
         message: result.success
-          ? `Task erstellt: "${intent.title}" (${intent.date}${intent.time ? ` ${intent.time}` : ""})`
+          ? `Task: "${intent.title}" (${intent.date}${intent.time ? ` ${intent.time}` : ""})`
           : "Task konnte nicht erstellt werden",
       };
     }
-
     case "calendar": {
       const result = await createCalendarEvent(intent.title, intent.date || TODAY(), intent.time);
       return {
-        intent,
         success: result.success,
         message: result.success
-          ? `Termin erstellt: "${intent.title}" (${intent.date}${intent.time ? ` ${intent.time}` : ""})`
+          ? `Termin: "${intent.title}" (${intent.date}${intent.time ? ` ${intent.time}` : ""})`
           : "Termin konnte nicht erstellt werden",
       };
     }
-
     case "complete": {
       const result = await completeTask(intent.searchTerm || intent.title);
       return {
-        intent,
         success: result.success,
         message: result.success
-          ? `Erledigt: "${result.task}" (${result.source})`
+          ? `Erledigt: "${result.task}"`
           : `Nicht gefunden: "${intent.searchTerm}"`,
       };
     }
-
     case "delete": {
       const result = await deleteItem(intent.searchTerm || intent.title);
       return {
-        intent,
         success: result.success,
         message: result.success
-          ? `Geloescht: "${result.item}" (${result.source})`
+          ? `Geloescht: "${result.item}"`
           : `Nicht gefunden: "${intent.searchTerm}"`,
       };
     }
-
     case "note":
     default:
-      return {
-        intent,
-        success: true,
-        message: `Notiz: "${intent.title}" (nur in Obsidian)`,
-      };
+      return { success: true, message: `Notiz: "${intent.title}"` };
   }
+}
+
+export async function processInboxMessage(text: string): Promise<InboxResult> {
+  const intents = await detectIntents(text);
+
+  const results = [];
+  for (const intent of intents) {
+    const result = await executeIntent(intent);
+    results.push({ intent, ...result });
+  }
+
+  const allSuccess = results.every((r) => r.success);
+  const messages = results.map((r) => r.message);
+
+  return {
+    intents,
+    results,
+    success: allSuccess,
+    message: messages.join(" | "),
+  };
 }
