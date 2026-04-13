@@ -48,6 +48,13 @@ Mögliche Intents:
 - "delete": Etwas soll gelöscht/entfernt werden ("lösch X", "nimm X raus", "X absagen")
 - "note": Alles andere (Idee, Erkenntnis, Reflexion, unklar)
 
+WICHTIG — Verschieben/Ändern:
+Wenn jemand sagt "Termin X hat sich auf Y verschoben" oder "verschieb X auf Y", dann sind das ZWEI Intents:
+1. {"type":"delete","searchTerm":"X"} — den alten Termin löschen
+2. {"type":"calendar","title":"X","time":"neue Zeit","date":"neues Datum"} — neuen Termin erstellen
+Beispiel: "Team-Meeting hat sich auf 16 Uhr verschoben" →
+[{"type":"delete","title":"Team-Meeting","searchTerm":"Team-Meeting"},{"type":"calendar","title":"Team-Meeting","date":"2026-04-13","time":"16:00"}]
+
 Antworte NUR mit einem JSON-Array:
 [{"type":"...","title":"kurzer sauberer Titel","date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"Suchbegriff fuer complete/delete"}]
 
