@@ -30,12 +30,20 @@ export function Heute() {
   const [habits, setHabits] = useStableState<HabitItem[]>([]);
   const [goals, setGoals] = useStableState<WeeklyGoals>({ weekNumber: 0, year: 0, dateRange: "", team: [], personal: [] });
 
+  // Cooldown: after scoring a habit, ignore habit updates for 10 seconds
+  const habitCooldown = useRef(false);
+
+  const freezeHabits = useCallback(() => {
+    habitCooldown.current = true;
+    setTimeout(() => { habitCooldown.current = false; }, 10_000);
+  }, []);
+
   const fetchAll = useCallback(async () => {
     const [cal, vault, todoist, hab, wg] = await Promise.all([
       apiFetch<CachedResponse<CalendarEvent[]>>("/calendar/today").catch(() => null),
       apiFetch<CachedResponse<Task[]>>("/tasks?date=" + new Date().toISOString().slice(0, 10)).catch(() => null),
       apiFetch<CachedResponse<Task[]>>("/tasks/todoist").catch(() => null),
-      apiFetch<CachedResponse<HabitItem[]>>("/habits").catch(() => null),
+      habitCooldown.current ? null : apiFetch<CachedResponse<HabitItem[]>>("/habits").catch(() => null),
       apiFetch<CachedResponse<WeeklyGoals>>("/weekly-goals").catch(() => null),
     ]);
     if (cal) setEvents(cal.data);
@@ -71,7 +79,7 @@ export function Heute() {
       <div className="grid grid-cols-[280px_1fr_280px] gap-4">
         <div className="flex flex-col gap-4">
           <ProfileCard topStreak={topStreak} />
-          <HabitsCard habits={habits} onRefresh={fetchAll} />
+          <HabitsCard habits={habits} onRefresh={fetchAll} onScore={freezeHabits} />
         </div>
         <div className="flex flex-col gap-4">
           <CalendarCard events={events} />

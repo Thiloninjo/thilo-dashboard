@@ -7,9 +7,10 @@ import type { HabitItem } from "../../lib/types";
 interface Props {
   habits: HabitItem[];
   onRefresh: () => void;
+  onScore?: () => void;
 }
 
-export function HabitsCard({ habits, onRefresh }: Props) {
+export function HabitsCard({ habits, onRefresh, onScore }: Props) {
   // Track which habits we've already scored this session (prevent double-click)
   const [scored, setScored] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<string | null>(null);
@@ -19,6 +20,7 @@ export function HabitsCard({ habits, onRefresh }: Props) {
 
     setLoading(id);
     setScored((prev) => new Set(prev).add(id)); // Optimistic: mark as done
+    onScore?.(); // Freeze habit updates for 10s
 
     try {
       await apiFetch(`/habits/${id}/score`, {

@@ -8,7 +8,7 @@ import { broadcastApiUpdate } from "./file-watcher.js";
 const TODOIST_INTERVAL = 2_000;
 // Calendar + Habitica change less often
 const CALENDAR_INTERVAL = 30_000;
-const HABITICA_INTERVAL = 15_000;
+const HABITICA_INTERVAL = 120_000; // 2 minutes — habits don't change often
 
 async function pollSource(name: string, fetcher: () => Promise<any>): Promise<void> {
   try {
