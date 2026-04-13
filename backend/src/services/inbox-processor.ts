@@ -6,7 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 // === Intent Detection via Claude Haiku ===
 
 interface Intent {
-  type: "task" | "calendar" | "complete" | "delete" | "sop" | "note";
+  type: "task" | "calendar" | "complete" | "delete" | "sop" | "sop_hint" | "note";
   title: string;
   time?: string; // HH:MM
   date?: string; // YYYY-MM-DD
@@ -48,7 +48,8 @@ Mögliche Intents:
 - "calendar": Ein Termin mit Zeit/Datum (Meeting, Arzt, Fitnessstudio, Event)
 - "complete": Etwas wurde erledigt/abgehakt ("hab X gemacht", "X erledigt", "X fertig", "X genommen")
 - "delete": Etwas soll gelöscht/entfernt werden ("lösch X", "nimm X raus", "X absagen")
-- "sop": Best Practice, Tipp oder Learning fuer eine Video-Produktion SOP
+- "sop": EXPLIZIT angewiesen, etwas in eine SOP einzutragen ("füg in die SOP hinzu", "trag in die SOP ein", "SOP Eintrag:", "das muss in die SOP")
+- "sop_hint": Haiku erkennt, dass etwas SOP-relevant SEIN KÖNNTE, aber es wurde NICHT explizit gesagt — wird nur als Claude-Notiz vermerkt, nicht in die Queue
 - "note": Alles andere (Idee, Erkenntnis, Reflexion, unklar)
 
 SOP-ERKENNUNG — verfuegbare SOPs:
@@ -63,9 +64,18 @@ Workspace "Cavy":
   - "Filming SOP.md" = Vlog Filming SOP (Vlog-Drehs, Daily Vlogs)
   - "Vlog Editing SOP.md" = Vlog Editing SOP (Vlog-Schnitt)
 
-Bei "sop": Gib zusaetzlich "sopWorkspace" und "sopFile" an.
-Beispiel: "Bei Langform-Videos immer Stativ mitnehmen" →
-{"type":"sop","title":"Immer Stativ mitnehmen","sopWorkspace":"Tennis-Ring-Lual","sopFile":"Longform SOP.md"}
+Bei "sop" und "sop_hint": Gib zusaetzlich "sopWorkspace" und "sopFile" an.
+
+WICHTIG — Unterscheidung sop vs sop_hint:
+- "sop" NUR wenn der User EXPLIZIT sagt: "füg in die SOP ein", "trag in die SOP ein", "SOP Eintrag", "das muss in die SOP", "pack das in die SOP"
+- "sop_hint" wenn der User etwas sagt, das SOP-relevant SEIN KÖNNTE, aber er hat es NICHT explizit angewiesen. Z.B. "Beim Dreh heute hab ich gemerkt, Stativ ist wichtig" — könnte relevant sein, aber er hat nicht gesagt "füg das ein"
+- Im Zweifel: "sop_hint", NICHT "sop". Lieber zu vorsichtig als zu aggressiv.
+
+Beispiel explizit: "Füg in die Longform SOP ein: Stativ immer mitnehmen" →
+{"type":"sop","title":"Stativ immer mitnehmen","sopWorkspace":"Tennis-Ring-Lual","sopFile":"Longform SOP.md"}
+
+Beispiel implizit: "Beim Dreh heute war das Stativ mega wichtig" →
+{"type":"sop_hint","title":"Stativ war beim Dreh wichtig","sopWorkspace":"Tennis-Ring-Lual","sopFile":"Dreh Learnings.md"}
 
 WICHTIG — Verschieben/Ändern:
 Wenn jemand sagt "Termin X hat sich auf Y verschoben" oder "verschieb X auf Y", dann sind das ZWEI Intents:
@@ -322,7 +332,7 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
   return { success: false };
 }
 
-async function addToSOP(title: string, workspace: string, sopFile: string): Promise<{ success: boolean }> {
+async function addToSOP(title: string, workspace: string, sopFile: string, hintOnly: boolean): Promise<{ success: boolean }> {
   const { join } = await import("path");
   const { readFile: rf, writeFile: wf } = await import("fs/promises");
   const { simpleGit } = await import("simple-git");
@@ -334,24 +344,33 @@ async function addToSOP(title: string, workspace: string, sopFile: string): Prom
     let content = await rf(filePath, "utf-8");
     const today = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
 
-    // Find Ausarbeitungs-Queue section and add entry
-    const queueMatch = content.match(/## Ausarbeitungs-Queue\n/);
-    if (queueMatch && queueMatch.index !== undefined) {
-      const insertPos = queueMatch.index + queueMatch[0].length;
-      content = content.slice(0, insertPos) + `- [ ] ${title}\n` + content.slice(insertPos);
+    if (hintOnly) {
+      // Add to Claude-Notizen block (hint, not confirmed)
+      const claudeBlock = content.match(/## Claude-Notizen\n/);
+      if (claudeBlock && claudeBlock.index !== undefined) {
+        const insertPos = claudeBlock.index + claudeBlock[0].length;
+        content = content.slice(0, insertPos) + `- (${today}) Moeglicherweise relevant: ${title}\n` + content.slice(insertPos);
+      } else {
+        content += `\n## Claude-Notizen\n- (${today}) Moeglicherweise relevant: ${title}\n`;
+      }
     } else {
-      // No queue section — append one
-      content += `\n## Ausarbeitungs-Queue\n- [ ] ${title}\n`;
+      // Add to Ausarbeitungs-Queue (explicit command)
+      const queueMatch = content.match(/## Ausarbeitungs-Queue\n/);
+      if (queueMatch && queueMatch.index !== undefined) {
+        const insertPos = queueMatch.index + queueMatch[0].length;
+        content = content.slice(0, insertPos) + `- [ ] ${title}\n` + content.slice(insertPos);
+      } else {
+        content += `\n## Ausarbeitungs-Queue\n- [ ] ${title}\n`;
+      }
     }
 
     await wf(filePath, content, "utf-8");
 
-    // Git commit
     const git = simpleGit(vaultPath);
     await git.add(filePath);
-    await git.commit(`SOP ${sopFile.replace(".md", "")}: ${title} (Quelle: Spracheingabe ${today})`);
+    const prefix = hintOnly ? "SOP-Hinweis" : "SOP";
+    await git.commit(`${prefix} ${sopFile.replace(".md", "")}: ${title} (Quelle: Spracheingabe ${today})`);
 
-    // Push if possible
     try { await git.push(); } catch {}
 
     return { success: true };
@@ -412,12 +431,24 @@ async function executeIntent(intent: Intent): Promise<{ success: boolean; messag
       if (!intent.sopWorkspace || !intent.sopFile) {
         return { success: false, message: `SOP nicht erkannt fuer: "${intent.title}"` };
       }
-      const result = await addToSOP(intent.title, intent.sopWorkspace, intent.sopFile);
+      const result = await addToSOP(intent.title, intent.sopWorkspace, intent.sopFile, false);
       return {
         success: result.success,
         message: result.success
-          ? `SOP: "${intent.title}" → ${intent.sopFile}`
+          ? `SOP Queue: "${intent.title}" → ${intent.sopFile}`
           : `SOP konnte nicht aktualisiert werden`,
+      };
+    }
+    case "sop_hint": {
+      if (!intent.sopWorkspace || !intent.sopFile) {
+        return { success: true, message: `Notiz: "${intent.title}"` };
+      }
+      const result = await addToSOP(intent.title, intent.sopWorkspace, intent.sopFile, true);
+      return {
+        success: result.success,
+        message: result.success
+          ? `SOP Hinweis: "${intent.title}" → ${intent.sopFile} (Claude-Notizen)`
+          : `Hinweis konnte nicht gespeichert werden`,
       };
     }
     case "note":
