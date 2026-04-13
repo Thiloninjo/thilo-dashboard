@@ -32,7 +32,11 @@ healthDataRouter.post("/", (req, res) => {
   checkDateReset();
 
   const body = req.body;
-  console.log("[Health] Received:", JSON.stringify(body).slice(0, 500));
+  if (body.data?.metrics) {
+    console.log("[Health] Metrics:", body.data.metrics.map((m: any) => `${m.name} (${m.units}, ${m.data?.length} entries)`).join(", "));
+  } else {
+    console.log("[Health] Received:", JSON.stringify(body).slice(0, 300));
+  }
 
   // Auto Export sends: { data: { metrics: [{ name: "step_count", data: [{ qty: 123 }, ...] }] } }
   let steps = 0;
