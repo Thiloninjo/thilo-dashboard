@@ -83,7 +83,7 @@ export function Heute() {
       />
       <div className="grid grid-cols-[280px_1fr_280px] gap-4">
         <div className="flex flex-col gap-4">
-          <ProfileCard topStreak={topStreak} />
+          <ProfileCard />
           <HabitsCard habits={habits} onScore={handleScore} />
         </div>
         <div className="flex flex-col gap-4">

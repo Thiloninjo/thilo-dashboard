@@ -33,7 +33,7 @@ export function HabitsCard({ habits, onScore }: Props) {
 
   return (
     <GlassCard>
-      <CardHeader title="Habits" badge="Habitica" badgeColor="text-success" />
+      <CardHeader title="Habits" />
       <div className="flex flex-col gap-1">
         {habits.length === 0 && <p className="text-white/40 text-sm font-medium">Keine Habits konfiguriert</p>}
         {habits.map((habit) => (
