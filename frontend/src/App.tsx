@@ -22,7 +22,7 @@ function LiquidGlassFilter() {
         <feDisplacementMap
           in="SourceGraphic"
           in2="turbulence"
-          scale="200"
+          scale="30"
           xChannelSelector="R"
           yChannelSelector="G"
         />
