@@ -82,17 +82,25 @@ export function Heute() {
         weekCompletion={weekCompletion}
         weekNumber={goals.weekNumber}
       />
-      <div className="grid grid-cols-[280px_1fr_320px] gap-6">
-        <div className="flex flex-col gap-4">
+      <div
+        className="grid gap-6"
+        style={{
+          gridTemplateColumns: "280px 1fr 350px",
+          maxHeight: "calc(100vh - 220px)",
+        }}
+      >
+        <div className="flex flex-col gap-4 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
           <ProfileCard />
           <StepsCard />
           <HabitsCard habits={habits} onScore={handleScore} />
         </div>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 overflow-y-auto" style={{ scrollbarWidth: "none" }}>
           <CalendarCard events={events} />
           <WeeklyGoalsCard goals={goals} />
         </div>
-        <TasksCard vaultTasks={vaultTasks} todoistTasks={todoistTasks} onRefresh={fetchAll} />
+        <div className="overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+          <TasksCard vaultTasks={vaultTasks} todoistTasks={todoistTasks} onRefresh={fetchAll} />
+        </div>
       </div>
     </>
   );
