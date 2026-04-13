@@ -1,56 +1,70 @@
 import { useEffect, useRef } from "react";
 
-// Combined video: ~30 seconds total
-// First half (0-15s): night → day (maps to 00:00-12:00)
-// Second half (15-30s): day → night (maps to 12:00-24:00)
+// Video: ~30 seconds total
+// First half: night → day (00:00-12:00)
+// Second half: day → night (12:00-24:00)
+// Played at ultra-slow speed so it takes exactly 24 hours to complete
+
+const SECONDS_IN_DAY = 86400;
 
 export function DynamicWallpaper() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const durationRef = useRef(0);
-
-  function seekToCurrentTime() {
-    const video = videoRef.current;
-    if (!video || !durationRef.current) return;
-
-    const now = new Date();
-    const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
-    const dayProgress = minutesSinceMidnight / 1440; // 0.0 - 1.0
-
-    const targetTime = dayProgress * durationRef.current;
-    video.currentTime = targetTime;
-  }
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
-    function onLoaded() {
-      durationRef.current = video!.duration;
-      video!.pause(); // Don't play — we control the position manually
-      seekToCurrentTime();
+    function start() {
+      const duration = video!.duration;
+      if (!duration) return;
+
+      // Calculate playback rate: video duration / seconds in a day
+      const rate = duration / SECONDS_IN_DAY;
+      // Chrome minimum playbackRate is 0.0625 — we can't go lower
+      // So instead: we play at minimum rate and periodically correct position
+
+      // Set to correct position based on current time
+      const now = new Date();
+      const secondsSinceMidnight = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+      const dayProgress = secondsSinceMidnight / SECONDS_IN_DAY;
+      video!.currentTime = dayProgress * duration;
+
+      // Play at slowest possible rate
+      video!.playbackRate = 0.0625; // Chrome minimum
+      video!.play().catch(() => {});
+
+      // Correct position every 60 seconds to stay in sync
+      const interval = setInterval(() => {
+        const now = new Date();
+        const secs = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+        const targetTime = (secs / SECONDS_IN_DAY) * duration;
+        const currentTime = video!.currentTime;
+        const diff = Math.abs(currentTime - targetTime);
+
+        // Only correct if drifted more than 0.1 seconds
+        if (diff > 0.1) {
+          video!.currentTime = targetTime;
+        }
+      }, 60_000);
+
+      return interval;
     }
 
-    video.addEventListener("loadedmetadata", onLoaded);
+    let interval: ReturnType<typeof setInterval> | undefined;
 
-    // Update position every 10 seconds for ultra-smooth progression
-    const interval = setInterval(() => {
-      if (durationRef.current) {
-        const now = new Date();
-        const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
-        const dayProgress = minutesSinceMidnight / 1440;
-        const targetTime = dayProgress * durationRef.current;
+    function onLoaded() {
+      interval = start();
+    }
 
-        // Smooth seek: only move if difference is noticeable
-        const diff = Math.abs((video.currentTime || 0) - targetTime);
-        if (diff > 0.01) {
-          video.currentTime = targetTime;
-        }
-      }
-    }, 10_000);
+    if (video.readyState >= 1) {
+      interval = start();
+    } else {
+      video.addEventListener("loadedmetadata", onLoaded);
+    }
 
     return () => {
       video.removeEventListener("loadedmetadata", onLoaded);
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
   }, []);
 
@@ -62,6 +76,7 @@ export function DynamicWallpaper() {
         muted
         playsInline
         preload="auto"
+        loop
         className="absolute inset-0 w-full h-full object-cover"
       />
     </div>
