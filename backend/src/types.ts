@@ -65,6 +65,8 @@ export interface ChangeLogEntry {
   description: string;
   source: string;
   date: string;
+  workspace?: string;
+  sopFile?: string;
 }
 
 // === SOPs ===
