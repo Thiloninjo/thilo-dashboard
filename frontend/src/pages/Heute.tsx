@@ -89,16 +89,16 @@ export function Heute() {
           gap: "20px",
         }}
       >
+        <TasksCard vaultTasks={vaultTasks} todoistTasks={todoistTasks} onRefresh={fetchAll} />
+        <div className="flex flex-col gap-4">
+          <CalendarCard events={events} />
+          <WeeklyGoalsCard goals={goals} />
+        </div>
         <div className="flex flex-col gap-4">
           <ProfileCard />
           <StepsCard />
           <HabitsCard habits={habits} onScore={handleScore} />
         </div>
-        <div className="flex flex-col gap-4">
-          <CalendarCard events={events} />
-          <WeeklyGoalsCard goals={goals} />
-        </div>
-        <TasksCard vaultTasks={vaultTasks} todoistTasks={todoistTasks} onRefresh={fetchAll} />
       </div>
     </>
   );

@@ -18,7 +18,7 @@ import { startPolling } from "./services/poller.js";
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "50mb" }));
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", vaultPath: CONFIG.vaultPath });

@@ -170,7 +170,7 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
         </div>
       </GlassCard>
 
-      <GlassCard className="!max-h-[350px] !p-0">
+      <GlassCard className="!h-[350px] !p-0">
         <div className="overflow-y-auto p-5 h-full" style={{ scrollbarWidth: "none" }}>
         {/* Overdue: collapsible section */}
         {overdueTasks.length > 0 && (
@@ -223,16 +223,10 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
           ))}
         </AnimatePresence>
 
-        {visibleTasks.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col items-center py-6"
-          >
-            <span className="text-2xl mb-2">🎉</span>
-            <p className="text-text-muted text-xs">Alles erledigt!</p>
-          </motion.div>
+        {visibleTasks.length === 0 && overdueTasks.length === 0 && (
+          <div className="flex flex-col items-center justify-center flex-1 py-12">
+            <p className="text-white/30 text-sm font-medium">Keine Aufgaben für heute</p>
+          </div>
         )}
         </div>
       </GlassCard>

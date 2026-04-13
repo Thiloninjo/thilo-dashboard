@@ -32,9 +32,11 @@ export function HabitsCard({ habits, onScore }: Props) {
   }
 
   return (
-    <GlassCard>
-      <CardHeader title="Habits" />
-      <div className="flex flex-col gap-1">
+    <GlassCard className="!h-[250px] !p-0">
+      <div className="p-5 pb-2">
+        <CardHeader title="Habits" />
+      </div>
+      <div className="flex flex-col gap-1 overflow-y-auto px-5 pb-5" style={{ scrollbarWidth: "none", maxHeight: "190px" }}>
         {habits.length === 0 && <p className="text-white/40 text-sm font-medium">Keine Habits konfiguriert</p>}
         {habits.map((habit) => (
           <div
