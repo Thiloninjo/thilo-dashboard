@@ -1,15 +1,15 @@
-import { GlassCard } from "../components/GlassCard";
+import { PointCloudViewer } from "../components/PointCloudViewer";
 
 export function PersonalDev() {
   return (
     <>
-      <h2 className="text-xl font-bold mb-2">Personal Development</h2>
-      <p className="text-text-muted text-sm mb-6">Inhalt wird spaeter definiert</p>
-      <GlassCard>
-        <div className="flex items-center justify-center py-12">
-          <p className="text-text-muted text-sm">Coming soon — Affirmationen, Workbook, Muster, Whoop</p>
-        </div>
-      </GlassCard>
+      <h2 className="text-2xl font-bold mb-2 text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
+        Personal Development
+      </h2>
+      <p className="text-white/50 text-sm mb-6 font-medium" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}>
+        Bewege die Maus um die Perspektive zu ändern
+      </p>
+      <PointCloudViewer />
     </>
   );
 }
