@@ -130,8 +130,15 @@ export function SOPs() {
       <>
         <button
           onClick={goBack}
-          className="text-sm text-white/60 hover:text-white font-medium mb-4 flex items-center gap-1"
-          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}
+          className="mb-4 px-4 py-2 rounded-full text-sm text-white font-semibold flex items-center gap-2"
+          style={{
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            background: "rgba(255,255,255,0.1)",
+            border: "1px solid rgba(255,255,255,0.2)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.2), inset 0 0 8px rgba(255,255,255,0.1)",
+            textShadow: "0 1px 3px rgba(0,0,0,0.3)",
+          }}
         >
           ← Zurück
         </button>
@@ -165,8 +172,15 @@ export function SOPs() {
       <>
         <button
           onClick={goBack}
-          className="text-sm text-white/60 hover:text-white font-medium mb-4 flex items-center gap-1"
-          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}
+          className="mb-4 px-4 py-2 rounded-full text-sm text-white font-semibold flex items-center gap-2"
+          style={{
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            background: "rgba(255,255,255,0.1)",
+            border: "1px solid rgba(255,255,255,0.2)",
+            boxShadow: "0 4px 16px rgba(0,0,0,0.2), inset 0 0 8px rgba(255,255,255,0.1)",
+            textShadow: "0 1px 3px rgba(0,0,0,0.3)",
+          }}
         >
           ← Zurück
         </button>
