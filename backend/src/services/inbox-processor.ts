@@ -56,13 +56,15 @@ function parseDate(text: string): string {
 function detectIntent(text: string): Intent {
   const lower = text.toLowerCase().trim();
 
-  // === COMPLETE: "X abgeschlossen", "X erledigt", "X fertig" ===
-  if (/(?:abgeschlossen|erledigt|fertig|abhaken|done)\s*$/i.test(lower) ||
-      /^(?:hab|habe)\s+.+\s+(?:erledigt|abgeschlossen|fertig)/i.test(lower)) {
+  // === COMPLETE: "X abgeschlossen/erledigt/fertig/gemacht/done" or "hab X gemacht" ===
+  if (/(?:abgeschlossen|erledigt|fertig|abhaken|done|gemacht)\s*$/i.test(lower) ||
+      /^(?:hab|habe)\s+.+\s+(?:erledigt|abgeschlossen|fertig|gemacht)/i.test(lower) ||
+      /^(?:hab|habe)\s+(?:die|den|das|meine?)?\s*.+\s+(?:erledigt|abgeschlossen|fertig|gemacht)/i.test(lower)) {
     const content = text
-      .replace(/\s*(?:abgeschlossen|erledigt|fertig|abhaken|done)\s*$/i, "")
-      .replace(/^(?:hab|habe)\s+/i, "")
-      .replace(/\s+(?:erledigt|abgeschlossen|fertig)\s*$/i, "")
+      .replace(/\s*(?:abgeschlossen|erledigt|fertig|abhaken|done|gemacht)\s*$/i, "")
+      .replace(/^(?:hab|habe)\s+(?:die|den|das|meine?)?\s*/i, "")
+      .replace(/\s+(?:erledigt|abgeschlossen|fertig|gemacht)\s*$/i, "")
+      .replace(/\s+für heute$/i, "")
       .trim();
     return { type: "complete", content };
   }
@@ -153,30 +155,64 @@ async function createCalendarEvent(summary: string, date: string, time?: string)
   }
 }
 
-async function completeTodoistTask(searchText: string): Promise<{ success: boolean; task?: string }> {
-  // Search for matching task in today/overdue
-  const res = await fetch("https://todoist.com/api/v1/tasks/filter?query=today%20%7C%20overdue", {
-    headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
-  });
-
-  if (!res.ok) return { success: false };
-  const json = await res.json();
-  const tasks = json.results || [];
-
+async function completeTask(searchText: string): Promise<{ success: boolean; task?: string; source?: string }> {
   const searchLower = searchText.toLowerCase();
-  const match = tasks.find((t: any) =>
-    t.content.toLowerCase().includes(searchLower) ||
-    searchLower.includes(t.content.toLowerCase())
-  );
 
-  if (!match) return { success: false };
+  // 1. Try Habitica first (habits + dailies)
+  try {
+    const habRes = await fetch("https://habitica.com/api/v3/tasks/user?type=dailys", {
+      headers: {
+        "x-api-user": CONFIG.habitica.userId,
+        "x-api-key": CONFIG.habitica.apiToken,
+        "x-client": "thilo-dashboard",
+      },
+    });
+    if (habRes.ok) {
+      const habJson = await habRes.json();
+      const dailies = habJson.data || [];
+      const habitMatch = dailies.find((d: any) =>
+        d.isDue && !d.completed && (
+          d.text.toLowerCase().includes(searchLower) ||
+          searchLower.includes(d.text.toLowerCase())
+        )
+      );
+      if (habitMatch) {
+        const scoreRes = await fetch(`https://habitica.com/api/v3/tasks/${habitMatch.id}/score/up`, {
+          method: "POST",
+          headers: {
+            "x-api-user": CONFIG.habitica.userId,
+            "x-api-key": CONFIG.habitica.apiToken,
+            "x-client": "thilo-dashboard",
+          },
+        });
+        if (scoreRes.ok) return { success: true, task: habitMatch.text, source: "habitica" };
+      }
+    }
+  } catch {}
 
-  const closeRes = await fetch(`https://todoist.com/api/v1/tasks/${match.id}/close`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
-  });
+  // 2. Try Todoist
+  try {
+    const res = await fetch("https://todoist.com/api/v1/tasks/filter?query=today%20%7C%20overdue", {
+      headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const tasks = json.results || [];
+      const match = tasks.find((t: any) =>
+        t.content.toLowerCase().includes(searchLower) ||
+        searchLower.includes(t.content.toLowerCase())
+      );
+      if (match) {
+        const closeRes = await fetch(`https://todoist.com/api/v1/tasks/${match.id}/close`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
+        });
+        if (closeRes.ok) return { success: true, task: match.content, source: "todoist" };
+      }
+    }
+  } catch {}
 
-  return { success: closeRes.ok, task: match.content };
+  return { success: false };
 }
 
 // === Main Processor ===
@@ -214,7 +250,7 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
     }
 
     case "complete": {
-      const result = await completeTodoistTask(intent.content);
+      const result = await completeTask(intent.content);
       return {
         intent,
         success: result.success,
