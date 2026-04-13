@@ -6,7 +6,7 @@ import { broadcastApiUpdate } from "./file-watcher.js";
 
 const TODOIST_INTERVAL = 5_000;
 const CALENDAR_INTERVAL = 5_000;
-const HABITICA_INTERVAL = 60_000; // Habitica has strict rate limits
+const HABITICA_INTERVAL = 15_000; // Habitica stricter than Todoist (~30 req/min)
 
 async function pollSource(name: string, fetcher: () => Promise<any>): Promise<void> {
   try {
