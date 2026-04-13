@@ -32,6 +32,7 @@ healthDataRouter.post("/", (req, res) => {
   checkDateReset();
 
   const body = req.body;
+  console.log("[Health] Received:", JSON.stringify(body).slice(0, 500));
 
   // Auto Export sends data in various formats — handle flexibly
   let steps = 0;
