@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { KpiHeader } from "./heute/KpiHeader";
 import { ProfileCard } from "./heute/ProfileCard";
 import { HabitsCard } from "./heute/HabitsCard";

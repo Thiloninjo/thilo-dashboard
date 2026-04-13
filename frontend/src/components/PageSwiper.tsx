@@ -1,4 +1,5 @@
-import { ReactNode, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
+import type { ReactNode } from "react";
 
 interface Props {
   activeIndex: number;
