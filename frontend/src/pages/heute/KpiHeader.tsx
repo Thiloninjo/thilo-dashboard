@@ -6,6 +6,7 @@ interface Props {
   taskCount: number;
   habitStreak: number;
   habitsToday: number;
+  habitsTotal: number;
   weekCompletion: number;
   weekNumber: number;
 }
@@ -37,7 +38,7 @@ function useCurrentTime(): string {
   return time;
 }
 
-export function KpiHeader({ eventCount, taskCount, habitStreak, habitsToday, weekCompletion, weekNumber }: Props) {
+export function KpiHeader({ eventCount, taskCount, habitStreak, habitsToday, habitsTotal, weekCompletion, weekNumber }: Props) {
   const currentTime = useCurrentTime();
 
   return (
@@ -52,42 +53,26 @@ export function KpiHeader({ eventCount, taskCount, habitStreak, habitsToday, wee
           <StatusPill label={`KW ${weekNumber}`} />
         </div>
       </div>
-      <div className="flex gap-3 items-stretch">
-        <div
-          className="text-center px-5 py-3 rounded-2xl min-w-[100px]"
-          style={{
-            backdropFilter: "blur(20px) saturate(180%)",
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.2), inset 0 0 8px rgba(255,255,255,0.08)",
-          }}
-        >
-          <div className="text-[36px] font-extrabold tracking-tighter leading-none text-accent-light">{habitStreak}</div>
-          <div className="text-[10px] text-white/50 uppercase tracking-widest mt-1.5 font-semibold">Tage Streak</div>
+      <div
+        className="flex items-center gap-0 rounded-full"
+        style={{
+          backdropFilter: "blur(20px) saturate(180%)",
+          background: "rgba(255,255,255,0.08)",
+          border: "1px solid rgba(255,255,255,0.2)",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.2)",
+        }}
+      >
+        <div className="text-center px-5 py-3 border-r border-white/10">
+          <div className="text-[24px] font-extrabold tracking-tighter leading-none text-white">🔥 {habitStreak}</div>
+          <div className="text-[9px] text-white/60 uppercase tracking-widest mt-1 font-semibold">Streak</div>
         </div>
-        <div
-          className="text-center px-5 py-3 rounded-2xl min-w-[100px]"
-          style={{
-            backdropFilter: "blur(20px) saturate(180%)",
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.2), inset 0 0 8px rgba(255,255,255,0.08)",
-          }}
-        >
-          <div className="text-[36px] font-extrabold tracking-tighter leading-none text-success">{habitsToday}</div>
-          <div className="text-[10px] text-white/50 uppercase tracking-widest mt-1.5 font-semibold">Habits heute</div>
+        <div className="text-center px-5 py-3 border-r border-white/10">
+          <div className="text-[24px] font-extrabold tracking-tighter leading-none text-white">{habitsToday}/{habitsTotal}</div>
+          <div className="text-[9px] text-white/60 uppercase tracking-widest mt-1 font-semibold">Habits</div>
         </div>
-        <div
-          className="text-center px-5 py-3 rounded-2xl min-w-[100px]"
-          style={{
-            backdropFilter: "blur(20px) saturate(180%)",
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.15)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.2), inset 0 0 8px rgba(255,255,255,0.08)",
-          }}
-        >
-          <div className="text-[36px] font-extrabold tracking-tighter leading-none text-warning">{weekCompletion}%</div>
-          <div className="text-[10px] text-white/50 uppercase tracking-widest mt-1.5 font-semibold">Woche</div>
+        <div className="text-center px-5 py-3">
+          <div className="text-[24px] font-extrabold tracking-tighter leading-none text-white">{weekCompletion}%</div>
+          <div className="text-[9px] text-white/60 uppercase tracking-widest mt-1 font-semibold">Woche</div>
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ export function CalendarCard({ events }: { events: CalendarEvent[] }) {
 
   return (
     <GlassCard>
-      <CardHeader title="Termine heute" badge="Google Calendar" badgeColor="text-accent" />
+      <CardHeader title="Termine heute" />
       <div className="flex flex-col gap-2">
         {events.length === 0 && <p className="text-white/40 text-sm font-medium">Keine Termine heute</p>}
         {events.map((event) => (

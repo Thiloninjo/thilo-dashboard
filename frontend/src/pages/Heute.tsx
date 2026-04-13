@@ -77,6 +77,7 @@ export function Heute() {
         taskCount={allTasks.filter((t) => !t.completed).length}
         habitStreak={topStreak.days}
         habitsToday={completedHabits}
+        habitsTotal={habits.length}
         weekCompletion={weekCompletion}
         weekNumber={goals.weekNumber}
       />
