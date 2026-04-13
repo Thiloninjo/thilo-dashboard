@@ -202,17 +202,54 @@ export function SOPs() {
     );
   }
 
-  // Level 1: Workspace cards
+  // Level 1: Workspace cards with character images
+  const workspaceImages: Record<string, string> = {
+    "Tennis-Ring-Lual": "/sop-trl.png",
+    "Cavy": "/sop-cavy.png",
+  };
+
   return (
     <>
       <h2 className="text-2xl font-bold mb-2 text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>SOPs</h2>
       <p className="text-white/50 text-sm mb-6 font-medium" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}>Wähle einen Workspace</p>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-6">
         {workspaces.map((ws) => (
-          <GlassCard key={ws.name} onClick={() => openWorkspace(ws.name)}>
-            <div className="text-lg font-bold text-white">{ws.name}</div>
-            <div className="text-xs text-white/50 mt-1 font-medium">{ws.sopCount} SOPs</div>
-          </GlassCard>
+          <div
+            key={ws.name}
+            onClick={() => openWorkspace(ws.name)}
+            className="relative cursor-pointer group"
+          >
+            {/* Character image — sticks out of the top */}
+            {workspaceImages[ws.name] && (
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+                <img
+                  src={workspaceImages[ws.name]}
+                  alt={ws.name}
+                  className="h-40 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300"
+                />
+              </div>
+            )}
+            {/* Glass card — clips the image at bottom */}
+            <div
+              className="relative overflow-hidden rounded-3xl pt-24 pb-5 px-6 text-center transition-all duration-300 group-hover:scale-[1.02]"
+              style={{
+                backdropFilter: "blur(20px) saturate(180%)",
+                WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                background: "rgba(255,255,255,0.1)",
+                border: "1px solid rgba(255,255,255,0.2)",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.25), inset 0 0 20px -5px rgba(255,255,255,0.2)",
+              }}
+            >
+              <div className="relative z-10">
+                <div className="text-xl font-bold text-white" style={{ textShadow: "0 2px 6px rgba(0,0,0,0.3)" }}>
+                  {ws.name}
+                </div>
+                <div className="text-sm text-white/50 mt-1 font-medium">
+                  {ws.sopCount} SOPs
+                </div>
+              </div>
+            </div>
+          </div>
         ))}
       </div>
     </>
