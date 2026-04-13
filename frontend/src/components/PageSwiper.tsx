@@ -36,26 +36,21 @@ export function PageSwiper({ activeIndex, dragProgress, pages }: Props) {
           willChange: "transform",
         }}
       >
-        {pages.map((page, i) => {
-          const distance = Math.abs(i - offset);
-          const shouldRender = distance < 2;
-
-          return (
-            <div
-              key={i}
-              style={{
-                // Each page takes exactly 100% of the visible area
-                width: "100%",
-                minWidth: "100%",
-                flexShrink: 0,
-                opacity: shouldRender ? 1 : 0,
-                pointerEvents: Math.round(offset) === i ? "auto" : "none",
-              }}
-            >
-              {shouldRender ? page : null}
-            </div>
-          );
-        })}
+        {pages.map((page, i) => (
+          <div
+            key={i}
+            style={{
+              width: "100%",
+              minWidth: "100%",
+              flexShrink: 0,
+              // Always render all pages (keeps state alive), just hide distant ones visually
+              visibility: Math.abs(i - offset) < 2 ? "visible" : "hidden",
+              pointerEvents: Math.round(offset) === i ? "auto" : "none",
+            }}
+          >
+            {page}
+          </div>
+        ))}
       </div>
     </div>
   );
