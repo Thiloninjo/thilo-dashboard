@@ -4,11 +4,10 @@ import { getAllHabits } from "./habitica.js";
 import { cacheSet } from "../cache.js";
 import { broadcastApiUpdate } from "./file-watcher.js";
 
-// Todoist: 450 req/15min limit — 15s safe for two instances (local + server)
-const TODOIST_INTERVAL = 15_000;
-// Calendar + Habitica change less often
-const CALENDAR_INTERVAL = 30_000;
-const HABITICA_INTERVAL = 120_000; // 2 minutes — habits don't change often
+// All APIs: 5 seconds — fast updates everywhere
+const TODOIST_INTERVAL = 5_000;
+const CALENDAR_INTERVAL = 5_000;
+const HABITICA_INTERVAL = 5_000;
 
 async function pollSource(name: string, fetcher: () => Promise<any>): Promise<void> {
   try {
