@@ -33,14 +33,14 @@ export async function loadTokens(): Promise<boolean> {
   }
 }
 
-export async function getTodayEvents(): Promise<CalendarEvent[]> {
+export async function getEventsForDate(date?: string): Promise<CalendarEvent[]> {
   const hasTokens = await loadTokens();
   if (!hasTokens) return [];
 
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-  const now = new Date();
-  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const target = date ? new Date(date + "T00:00:00") : new Date();
+  const startOfDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
   const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
   const response = await calendar.events.list({
@@ -79,3 +79,5 @@ export async function getTodayEvents(): Promise<CalendarEvent[]> {
     };
   });
 }
+
+export const getTodayEvents = () => getEventsForDate();

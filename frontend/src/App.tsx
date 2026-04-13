@@ -8,6 +8,7 @@ import { ChangeLog } from "./pages/ChangeLog";
 import { SOPs } from "./pages/SOPs";
 import { AIEdge } from "./pages/AIEdge";
 import { PersonalDev } from "./pages/PersonalDev";
+import { Planning } from "./pages/Planning";
 
 function LiquidGlassFilter() {
   return (
@@ -15,7 +16,7 @@ function LiquidGlassFilter() {
   );
 }
 
-export const TAB_LABELS = ["Heute", "Change-Log", "SOPs", "AI-Edge", "Personal Dev"];
+export const TAB_LABELS = ["Heute", "Planning", "Change-Log", "SOPs", "AI-Edge", "Personal Dev"];
 
 function PageWrap({ children }: { children: React.ReactNode }) {
   return <div className="max-w-[1400px] mx-auto px-7 py-7">{children}</div>;
@@ -23,6 +24,7 @@ function PageWrap({ children }: { children: React.ReactNode }) {
 
 const pages = [
   <PageWrap key="heute"><Heute /></PageWrap>,
+  <PageWrap key="planning"><Planning /></PageWrap>,
   <PageWrap key="changelog"><ChangeLog /></PageWrap>,
   <PageWrap key="sops"><SOPs /></PageWrap>,
   <PageWrap key="aiedge"><AIEdge /></PageWrap>,
