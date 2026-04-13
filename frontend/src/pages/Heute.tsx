@@ -9,49 +9,35 @@ import { apiFetch } from "../lib/api";
 import { onWSMessage } from "../lib/ws";
 import type { CalendarEvent, Task, HabitItem, WeeklyGoals, CachedResponse } from "../lib/types";
 
-// Only update state if data actually changed (prevents flicker)
-function useStableState<T>(initial: T): [T, (newVal: T) => void] {
-  const [state, setState] = useState<T>(initial);
-  const ref = useRef(JSON.stringify(initial));
-  const setStable = useCallback((newVal: T) => {
-    const json = JSON.stringify(newVal);
-    if (json !== ref.current) {
-      ref.current = json;
-      setState(newVal);
-    }
-  }, []);
-  return [state, setStable];
-}
-
 export function Heute() {
-  const [events, setEvents] = useStableState<CalendarEvent[]>([]);
-  const [vaultTasks, setVaultTasks] = useStableState<Task[]>([]);
-  const [todoistTasks, setTodoistTasks] = useStableState<Task[]>([]);
-  const [habits, setHabits] = useStableState<HabitItem[]>([]);
-  const [goals, setGoals] = useStableState<WeeklyGoals>({ weekNumber: 0, year: 0, dateRange: "", team: [], personal: [] });
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [vaultTasks, setVaultTasks] = useState<Task[]>([]);
+  const [todoistTasks, setTodoistTasks] = useState<Task[]>([]);
+  const [rawHabits, setRawHabits] = useState<HabitItem[]>([]);
+  const [goals, setGoals] = useState<WeeklyGoals>({ weekNumber: 0, year: 0, dateRange: "", team: [], personal: [] });
 
-  // Cooldown: after scoring a habit, ignore habit updates for 10 seconds
-  const habitCooldown = useRef(false);
+  // Scored habits — persists across re-renders, never reset by server data
+  const [scoredIds, setScoredIds] = useState<Set<string>>(new Set());
 
-  const freezeHabits = useCallback(() => {
-    habitCooldown.current = true;
-    setTimeout(() => { habitCooldown.current = false; }, 10_000);
-  }, []);
+  // Merge server habits with local scored state
+  const habits = rawHabits.map((h) =>
+    scoredIds.has(h.id) ? { ...h, completed: true } : h
+  );
 
   const fetchAll = useCallback(async () => {
     const [cal, vault, todoist, hab, wg] = await Promise.all([
       apiFetch<CachedResponse<CalendarEvent[]>>("/calendar/today").catch(() => null),
       apiFetch<CachedResponse<Task[]>>("/tasks?date=" + new Date().toISOString().slice(0, 10)).catch(() => null),
       apiFetch<CachedResponse<Task[]>>("/tasks/todoist").catch(() => null),
-      habitCooldown.current ? null : apiFetch<CachedResponse<HabitItem[]>>("/habits").catch(() => null),
+      apiFetch<CachedResponse<HabitItem[]>>("/habits").catch(() => null),
       apiFetch<CachedResponse<WeeklyGoals>>("/weekly-goals").catch(() => null),
     ]);
     if (cal) setEvents(cal.data);
     if (vault) setVaultTasks(vault.data);
     if (todoist) setTodoistTasks(todoist.data);
-    if (hab) setHabits(hab.data);
+    if (hab) setRawHabits(hab.data);
     if (wg) setGoals(wg.data);
-  }, [setEvents, setVaultTasks, setTodoistTasks, setHabits, setGoals]);
+  }, []);
 
   useEffect(() => {
     fetchAll();
@@ -59,6 +45,10 @@ export function Heute() {
       if (msg.type === "vault-changed" || msg.type === "api-updated") fetchAll();
     });
   }, [fetchAll]);
+
+  function handleScore(id: string) {
+    setScoredIds((prev) => new Set(prev).add(id));
+  }
 
   const topStreak = habits.reduce((best, h) => (h.streak > best.days ? { name: h.text, days: h.streak } : best), { name: "Planks", days: 0 });
   const completedHabits = habits.filter((h) => h.completed).length;
@@ -79,7 +69,7 @@ export function Heute() {
       <div className="grid grid-cols-[280px_1fr_280px] gap-4">
         <div className="flex flex-col gap-4">
           <ProfileCard topStreak={topStreak} />
-          <HabitsCard habits={habits} onRefresh={fetchAll} onScore={freezeHabits} />
+          <HabitsCard habits={habits} onScore={handleScore} />
         </div>
         <div className="flex flex-col gap-4">
           <CalendarCard events={events} />
