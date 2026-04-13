@@ -4,10 +4,9 @@ import { getAllHabits } from "./habitica.js";
 import { cacheSet } from "../cache.js";
 import { broadcastApiUpdate } from "./file-watcher.js";
 
-// All APIs: 5 seconds — fast updates everywhere
 const TODOIST_INTERVAL = 5_000;
 const CALENDAR_INTERVAL = 5_000;
-const HABITICA_INTERVAL = 5_000;
+const HABITICA_INTERVAL = 60_000; // Habitica has strict rate limits
 
 async function pollSource(name: string, fetcher: () => Promise<any>): Promise<void> {
   try {
