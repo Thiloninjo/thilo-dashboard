@@ -68,6 +68,7 @@ export interface SOPSummary {
 
 export interface SOPDetail {
   name: string;
+  rawContent: string;
   quickCheck: { text: string; checked: boolean }[];
   lessonsLearned: { date: string; text: string }[];
   queue: { text: string; checked: boolean }[];

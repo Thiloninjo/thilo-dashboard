@@ -35,7 +35,7 @@ export function parseSOPDetail(content: string): SOPDetail {
     .filter((m): m is RegExpMatchArray => m !== null)
     .map((m) => ({ text: m[2].trim(), checked: m[1] === "x" }));
 
-  return { name, quickCheck, lessonsLearned, queue, fullSop: fullSopSection };
+  return { name, rawContent: content, quickCheck, lessonsLearned, queue, fullSop: fullSopSection };
 }
 
 export async function getWorkspaces(): Promise<Workspace[]> {
