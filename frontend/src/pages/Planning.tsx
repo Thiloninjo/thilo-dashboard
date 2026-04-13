@@ -7,7 +7,16 @@ const DAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 function getDateStr(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  // Use local date, not UTC
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function getLocalToday(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
 function getDaysInMonth(year: number, month: number): number {
@@ -15,13 +24,13 @@ function getDaysInMonth(year: number, month: number): number {
 }
 
 export function Planning() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [viewMonth, setViewMonth] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(getLocalToday);
+  const [viewMonth, setViewMonth] = useState(getLocalToday);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const dateStr = getDateStr(selectedDate);
-  const today = getDateStr(new Date());
+  const today = getDateStr(getLocalToday());
 
   // Fetch events + tasks for selected date
   useEffect(() => {
@@ -82,21 +91,29 @@ export function Planning() {
         {/* Calendar */}
         <GlassCard>
           {/* Month navigation */}
-          <div className="flex items-center justify-between mb-4">
-            <button onClick={prevMonth} className="text-white/60 hover:text-white text-lg font-bold px-2">←</button>
-            <span className="text-white font-bold text-base">{MONTHS[month]} {year}</span>
-            <button onClick={nextMonth} className="text-white/60 hover:text-white text-lg font-bold px-2">→</button>
+          <div className="flex items-center justify-between mb-5">
+            <button
+              onClick={prevMonth}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors font-bold"
+            >←</button>
+            <span className="text-white font-bold text-lg" style={{ textShadow: "0 1px 4px rgba(0,0,0,0.3)" }}>
+              {MONTHS[month]} {year}
+            </span>
+            <button
+              onClick={nextMonth}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors font-bold"
+            >→</button>
           </div>
 
           {/* Day headers */}
-          <div className="grid grid-cols-7 gap-1 mb-2">
+          <div className="grid grid-cols-7 gap-2 mb-3">
             {["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"].map((d) => (
-              <div key={d} className="text-center text-[10px] text-white/40 font-semibold uppercase">{d}</div>
+              <div key={d} className="text-center text-[11px] text-white/50 font-bold uppercase">{d}</div>
             ))}
           </div>
 
           {/* Day grid */}
-          <div className="grid grid-cols-7 gap-1">
+          <div className="grid grid-cols-7 gap-2">
             {/* Empty cells before first day */}
             {Array.from({ length: startOffset }).map((_, i) => (
               <div key={`empty-${i}`} />
@@ -106,31 +123,38 @@ export function Planning() {
               const day = i + 1;
               const selected = isSelectedDay(day);
               const todayDay = isToday(day);
+              const isPast = new Date(year, month, day) < getLocalToday() && !todayDay;
 
               return (
                 <button
                   key={day}
                   onClick={() => selectDay(day)}
-                  className={`relative w-full aspect-square flex items-center justify-center rounded-xl text-sm font-semibold transition-all ${
+                  className={`relative w-full aspect-square flex items-center justify-center rounded-2xl text-sm font-bold transition-all ${
                     selected
                       ? "text-white"
+                      : isPast
+                      ? "text-white/25"
                       : todayDay
-                      ? "text-white/90"
-                      : "text-white/60 hover:text-white hover:bg-white/8"
+                      ? "text-white"
+                      : "text-white/60 hover:text-white"
                   }`}
                   style={
                     selected
                       ? {
                           background: "rgba(255,255,255,0.2)",
-                          border: "1px solid rgba(255,255,255,0.3)",
-                          boxShadow: "0 2px 8px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.15)",
+                          border: "1px solid rgba(255,255,255,0.35)",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2)",
                         }
                       : todayDay
                       ? {
-                          background: "rgba(255,255,255,0.08)",
-                          border: "1px solid rgba(255,255,255,0.15)",
+                          background: "rgba(255,255,255,0.1)",
+                          border: "1px solid rgba(255,255,255,0.2)",
+                          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.1)",
                         }
-                      : undefined
+                      : {
+                          background: "rgba(255,255,255,0.03)",
+                          border: "1px solid rgba(255,255,255,0.05)",
+                        }
                   }
                 >
                   {day}
