@@ -116,9 +116,11 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
         transition={{ duration: 0.4, ease: "easeInOut" }}
         className="flex items-center gap-2.5 py-2.5 px-3 rounded-2xl hover:bg-white/12 transition-colors cursor-pointer"
         style={{
-          background: overdue ? "rgba(239,68,58,0.12)" : "rgba(255,255,255,0.06)",
-          border: overdue ? "1px solid rgba(239,68,58,0.25)" : "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
+          background: overdue ? "rgba(180,40,30,0.35)" : "rgba(255,255,255,0.06)",
+          border: overdue ? "1px solid rgba(255,100,90,0.4)" : "1px solid rgba(255,255,255,0.08)",
+          boxShadow: overdue
+            ? "0 4px 12px rgba(200,50,40,0.25), inset 0 1px 0 rgba(255,255,255,0.08)"
+            : "0 2px 6px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.06)",
           marginBottom: "4px",
         }}
       >
