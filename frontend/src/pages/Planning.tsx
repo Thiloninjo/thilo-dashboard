@@ -6,6 +6,17 @@ import type { CalendarEvent, Task, CachedResponse } from "../lib/types";
 const DAYS = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
+// Format decimal hours in task titles: "4,29 Stunden" → "4h 17min"
+function formatTaskTitle(title: string): string {
+  return title.replace(/(\d+)[,.](\d+)\s*Stunden/gi, (_, whole, dec) => {
+    const hours = parseInt(whole);
+    const fraction = parseFloat(`0.${dec}`);
+    const minutes = Math.round(fraction * 60);
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}min`;
+  });
+}
+
 function getDateStr(date: Date): string {
   // Use local date, not UTC
   const y = date.getFullYear();
@@ -218,7 +229,7 @@ export function Planning() {
                     boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
                   }}
                 >
-                  <div className="text-sm font-semibold text-white">{task.content || task.description}</div>
+                  <div className="text-sm font-semibold text-white">{formatTaskTitle(task.content || task.description || "")}</div>
                 </div>
               ))}
             </div>
