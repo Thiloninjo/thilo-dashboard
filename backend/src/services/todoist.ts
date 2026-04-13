@@ -14,8 +14,9 @@ async function todoistFetch(path: string, options: RequestInit = {}): Promise<Re
   });
 }
 
-export async function getTodayTasks(): Promise<TodoistTask[]> {
-  const res = await todoistFetch("/tasks/filter?query=today%20%7C%20overdue");
+export async function getTasksForDate(date?: string): Promise<TodoistTask[]> {
+  const query = date ? encodeURIComponent(date) : "today%20%7C%20overdue";
+  const res = await todoistFetch(`/tasks/filter?query=${query}`);
   if (!res.ok) throw new Error(`Todoist API error: ${res.status}`);
   const json = await res.json();
   const tasks = json.results || json;
@@ -33,6 +34,8 @@ export async function getTodayTasks(): Promise<TodoistTask[]> {
       source: "todoist" as const,
     }));
 }
+
+export const getTodayTasks = () => getTasksForDate();
 
 export async function closeTodoistTask(taskId: string): Promise<void> {
   const res = await todoistFetch(`/tasks/${taskId}/close`, { method: "POST" });

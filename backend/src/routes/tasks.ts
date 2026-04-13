@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { readTasks, toggleVaultTask } from "../services/vault-tasks.js";
-import { getTodayTasks, closeTodoistTask, reopenTodoistTask } from "../services/todoist.js";
+import { getTodayTasks, getTasksForDate, closeTodoistTask, reopenTodoistTask } from "../services/todoist.js";
 
 export const tasksRouter = Router();
 
@@ -30,6 +30,15 @@ tasksRouter.patch("/:id", async (req, res) => {
 tasksRouter.get("/todoist", async (_req, res) => {
   try {
     const tasks = await getTodayTasks();
+    res.json({ data: tasks, lastUpdated: new Date().toISOString(), isStale: false });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch Todoist tasks" });
+  }
+});
+
+tasksRouter.get("/todoist/date/:date", async (req, res) => {
+  try {
+    const tasks = await getTasksForDate(req.params.date);
     res.json({ data: tasks, lastUpdated: new Date().toISOString(), isStale: false });
   } catch (err) {
     res.status(500).json({ error: "Failed to fetch Todoist tasks" });

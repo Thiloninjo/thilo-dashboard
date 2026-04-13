@@ -38,15 +38,8 @@ export function Planning() {
       .then((r) => setEvents(r.data))
       .catch(() => setEvents([]));
 
-    apiFetch<CachedResponse<Task[]>>(`/tasks/todoist`)
-      .then((r) => {
-        // Filter tasks for selected date
-        const filtered = r.data.filter((t: any) => {
-          const due = t.dueDate?.slice(0, 10);
-          return due === dateStr || (!due && dateStr === today);
-        });
-        setTasks(filtered);
-      })
+    apiFetch<CachedResponse<Task[]>>(`/tasks/todoist/date/${dateStr}`)
+      .then((r) => setTasks(r.data))
       .catch(() => setTasks([]));
   }, [dateStr]);
 
