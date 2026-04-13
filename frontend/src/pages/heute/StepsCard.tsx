@@ -11,12 +11,12 @@ export function StepsCard() {
   const [steps, setSteps] = useState(0);
 
   useEffect(() => {
-    const fetch = () =>
+    const fetchSteps = () =>
       apiFetch<{ data: HealthData }>("/health-data")
         .then((r) => setSteps(r.data.steps))
         .catch(() => {});
-    fetch();
-    const interval = setInterval(fetch, 5_000);
+    fetchSteps();
+    const interval = setInterval(fetchSteps, 10_000);
     return () => clearInterval(interval);
   }, []);
 

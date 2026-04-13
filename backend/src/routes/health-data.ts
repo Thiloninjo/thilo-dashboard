@@ -21,9 +21,26 @@ function checkDateReset() {
   }
 }
 
-// GET — dashboard reads current steps
-healthDataRouter.get("/", (_req, res) => {
+// GET — dashboard reads current steps (try server first if local has no data)
+healthDataRouter.get("/", async (_req, res) => {
   checkDateReset();
+
+  // If local has no steps, try fetching from server
+  if (healthData.steps === 0) {
+    try {
+      const serverRes = await fetch("https://46-225-160-248.nip.io/api/health-data", {
+        headers: { Authorization: "Bearer thilo-dashboard-2026-secret" },
+      });
+      if (serverRes.ok) {
+        const serverData = await serverRes.json();
+        if (serverData.data?.steps > 0) {
+          healthData.steps = serverData.data.steps;
+          healthData.lastUpdated = serverData.data.lastUpdated;
+        }
+      }
+    } catch {}
+  }
+
   res.json({ data: healthData, lastUpdated: healthData.lastUpdated, isStale: false });
 });
 
