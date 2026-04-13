@@ -50,13 +50,13 @@ body {
   overflow: hidden;
   border-radius: 28px;
   transition: opacity 0.26s ease-out, transform 0.2s;
-  filter: drop-shadow(-8px -10px 46px #0000005f);
+  filter: drop-shadow(0 15px 100px #000000c0) drop-shadow(0 6px 40px #00000090);
   backdrop-filter: brightness(1.15) blur(12px) contrast(1.05) saturate(1.3) url(#glassRefraction);
   -webkit-backdrop-filter: brightness(1.15) blur(12px) contrast(1.05) saturate(1.3);
 }
 
 .liquid-glass:hover {
-  filter: drop-shadow(-8px -10px 56px #00000070);
+  /* Hover handled by Framer Motion whileHover */
 }
 
 /* Inner glass bevel — original values */

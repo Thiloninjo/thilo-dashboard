@@ -13,6 +13,7 @@ export function GlassCard({ children, className = "", glow = false, onClick }: P
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ scale: 1.005, y: -1 }}
       transition={{ duration: 0.3 }}
       onClick={onClick}
       className={`
