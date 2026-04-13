@@ -5,7 +5,7 @@ import { readFile } from "fs/promises";
 // === Intent Detection ===
 
 interface Intent {
-  type: "task" | "calendar" | "complete" | "unknown";
+  type: "task" | "calendar" | "complete" | "delete" | "unknown";
   content: string;
   time?: string; // HH:MM
   date?: string; // YYYY-MM-DD
@@ -67,6 +67,17 @@ function detectIntent(text: string): Intent {
       .replace(/\s+für heute$/i, "")
       .trim();
     return { type: "complete", content };
+  }
+
+  // === DELETE: "lösche Termin X", "entferne Task X", "nimm X raus" ===
+  if (/^(?:l[oö]sche?|entferne?|nimm|delete|remove)\s+/i.test(lower) ||
+      /\s+(?:l[oö]schen|entfernen|raus(?:nehmen)?|raus)\s*$/i.test(lower)) {
+    const content = text
+      .replace(/^(?:l[oö]sche?|entferne?|nimm|delete|remove)\s+(?:den\s+|die\s+|das\s+)?(?:termin|task|to-?do|aufgabe)?\s*/i, "")
+      .replace(/\s*(?:l[oö]schen|entfernen|raus(?:nehmen)?)\s*$/i, "")
+      .replace(/\s*raus\s*$/i, "")
+      .trim();
+    return { type: "delete", content };
   }
 
   // === CALENDAR: explicit "neuer Termin" prefix only ===
@@ -215,6 +226,64 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
   return { success: false };
 }
 
+async function deleteItem(searchText: string): Promise<{ success: boolean; item?: string; source?: string }> {
+  const searchLower = searchText.toLowerCase();
+
+  // 1. Try Calendar — search today's events
+  try {
+    const tokenRaw = await readFile(CONFIG.google.tokenPath, "utf-8");
+    const tokens = JSON.parse(tokenRaw);
+    const oauth2Client = new google.auth.OAuth2(CONFIG.google.clientId, CONFIG.google.clientSecret, CONFIG.google.redirectUri);
+    oauth2Client.setCredentials(tokens);
+    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(startOfDay.getTime() + 48 * 60 * 60 * 1000); // today + tomorrow
+
+    const events = await calendar.events.list({
+      calendarId: "primary",
+      timeMin: startOfDay.toISOString(),
+      timeMax: endOfDay.toISOString(),
+      singleEvents: true,
+    });
+
+    const match = (events.data.items || []).find((e) =>
+      (e.summary || "").toLowerCase().includes(searchLower) ||
+      searchLower.includes((e.summary || "").toLowerCase())
+    );
+
+    if (match && match.id) {
+      await calendar.events.delete({ calendarId: "primary", eventId: match.id });
+      return { success: true, item: match.summary || "", source: "calendar" };
+    }
+  } catch {}
+
+  // 2. Try Todoist
+  try {
+    const res = await fetch("https://todoist.com/api/v1/tasks/filter?query=today%20%7C%20overdue", {
+      headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
+    });
+    if (res.ok) {
+      const json = await res.json();
+      const tasks = json.results || [];
+      const match = tasks.find((t: any) =>
+        t.content.toLowerCase().includes(searchLower) ||
+        searchLower.includes(t.content.toLowerCase())
+      );
+      if (match) {
+        const delRes = await fetch(`https://todoist.com/api/v1/tasks/${match.id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
+        });
+        if (delRes.ok) return { success: true, item: match.content, source: "todoist" };
+      }
+    }
+  } catch {}
+
+  return { success: false };
+}
+
 // === Main Processor ===
 
 export interface InboxResult {
@@ -255,8 +324,19 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
         intent,
         success: result.success,
         message: result.success
-          ? `Erledigt: "${result.task}"`
+          ? `Erledigt: "${result.task}" (${result.source})`
           : `Keine passende Task gefunden fuer "${intent.content}"`,
+      };
+    }
+
+    case "delete": {
+      const result = await deleteItem(intent.content);
+      return {
+        intent,
+        success: result.success,
+        message: result.success
+          ? `Geloescht: "${result.item}" (${result.source})`
+          : `Nichts gefunden fuer "${intent.content}"`,
       };
     }
 
