@@ -170,8 +170,8 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
         </div>
       </GlassCard>
 
-      <GlassCard>
-       <div className="max-h-[calc(100vh-380px)] overflow-y-auto" style={{ scrollbarWidth: "none" }}>
+      <GlassCard className="!max-h-[350px] !p-0">
+        <div className="overflow-y-auto p-5 h-full" style={{ scrollbarWidth: "none" }}>
         {/* Overdue: collapsible section */}
         {overdueTasks.length > 0 && (
           <div className="mb-2">
@@ -234,7 +234,7 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
             <p className="text-text-muted text-xs">Alles erledigt!</p>
           </motion.div>
         )}
-       </div>
+        </div>
       </GlassCard>
     </div>
   );
