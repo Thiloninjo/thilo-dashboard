@@ -236,7 +236,7 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
 
     const now = new Date();
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(startOfDay.getTime() + 48 * 60 * 60 * 1000);
+    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000); // Only today
 
     const events = await calendar.events.list({
       calendarId: "primary",
