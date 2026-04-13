@@ -1,45 +1,47 @@
 <!DOCTYPE html>
 <html>
-<head><title>Wallpaper Test — Zeitraffer</title></head>
+<head><title>Wallpaper Blend Test</title></head>
 <body style="margin:0;background:#000;">
-<video id="vid" muted playsinline preload="auto" style="position:fixed;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+<div id="frameA" style="position:fixed;inset:0;background-size:cover;background-position:center;"></div>
+<div id="frameB" style="position:fixed;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity 0.3s linear;"></div>
 <div style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:10;display:flex;gap:10px;align-items:center;">
-<button onclick="jump(-1)" style="padding:8px 16px;border-radius:16px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);backdrop-filter:blur(10px);cursor:pointer;">← 1h</button>
-<span id="info" style="color:white;font-size:16px;font-weight:bold;text-shadow:0 2px 8px rgba(0,0,0,0.5);min-width:80px;text-align:center;">--:--</span>
-<button onclick="jump(1)" style="padding:8px 16px;border-radius:16px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);backdrop-filter:blur(10px);cursor:pointer;">1h →</button>
-<button onclick="playThrough()" style="padding:8px 16px;border-radius:16px;background:rgba(0,122,255,0.3);color:white;border:1px solid rgba(0,122,255,0.5);backdrop-filter:blur(10px);cursor:pointer;">24h Timelapse ▶</button>
+<button onclick="jump(-1)" style="padding:8px 16px;border-radius:16px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);backdrop-filter:blur(10px);cursor:pointer;">-1h</button>
+<span id="info" style="color:white;font-size:18px;font-weight:bold;text-shadow:0 2px 8px rgba(0,0,0,0.5);min-width:100px;text-align:center;">--:--</span>
+<button onclick="jump(1)" style="padding:8px 16px;border-radius:16px;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.3);backdrop-filter:blur(10px);cursor:pointer;">+1h</button>
+<button onclick="play24h()" style="padding:8px 16px;border-radius:16px;background:rgba(0,122,255,0.3);color:white;border:1px solid rgba(0,122,255,0.5);backdrop-filter:blur(10px);cursor:pointer;">24h ▶</button>
 </div>
 <script>
-const vid = document.getElementById("vid");
+const fA = document.getElementById("frameA");
+const fB = document.getElementById("frameB");
 const info = document.getElementById("info");
-vid.src = "/wallpaper-24h.mp4";
-let simHours = new Date().getHours() + new Date().getMinutes()/60;
+let simMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+const TOTAL = 96;
 
-vid.addEventListener("loadedmetadata", () => { update(); });
+function url(i) { return "/wallpaper/time_" + String(((i%TOTAL)+TOTAL)%TOTAL).padStart(3,"0") + ".jpg"; }
 
 function update() {
-  const progress = ((simHours % 24) + 24) % 24 / 24;
-  vid.currentTime = progress * vid.duration;
-  const h = Math.floor(((simHours % 24) + 24) % 24);
-  const m = Math.floor((((simHours % 24) + 24) % 24 - h) * 60);
+  const exact = (simMinutes / 1440) * TOTAL;
+  const a = Math.floor(exact);
+  const b = (a + 1) % TOTAL;
+  const blend = exact - a;
+  fA.style.backgroundImage = "url(" + url(a) + ")";
+  fB.style.backgroundImage = "url(" + url(b) + ")";
+  fB.style.opacity = blend;
+  const h = Math.floor(((simMinutes%1440)+1440)%1440/60);
+  const m = Math.floor(((simMinutes%1440)+1440)%1440%60);
   info.textContent = String(h).padStart(2,"0") + ":" + String(m).padStart(2,"0");
 }
+update();
 
-function jump(hours) {
-  simHours += hours;
-  update();
-}
+function jump(hours) { simMinutes += hours * 60; update(); }
 
-let playing = false;
-function playThrough() {
-  if (playing) return;
-  playing = true;
-  simHours = 0;
+function play24h() {
+  simMinutes = 0;
   let i = setInterval(() => {
-    simHours += 0.25;
+    simMinutes += 5;
     update();
-    if (simHours >= 24) { clearInterval(i); playing = false; }
-  }, 100);
+    if (simMinutes >= 1440) clearInterval(i);
+  }, 50);
 }
 </script>
 </body>
