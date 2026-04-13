@@ -11,34 +11,7 @@ import { PersonalDev } from "./pages/PersonalDev";
 
 function LiquidGlassFilter() {
   return (
-    <svg style={{ display: "none" }}>
-      {/* Edge refraction — stronger distortion at edges, clear in center (like a real glass lens) */}
-      <filter id="glassRefraction" x="-5%" y="-5%" width="110%" height="110%">
-        {/* Detect edges of the element */}
-        <feMorphology in="SourceAlpha" operator="erode" radius="8" result="eroded" />
-        <feGaussianBlur in="eroded" stdDeviation="12" result="blurredEdge" />
-
-        {/* Create edge mask: bright at edges, dark in center */}
-        <feComposite in="SourceAlpha" in2="blurredEdge" operator="out" result="edgeMask" />
-        <feGaussianBlur in="edgeMask" stdDeviation="6" result="softEdge" />
-
-        {/* Subtle noise for organic feel */}
-        <feTurbulence type="fractalNoise" baseFrequency="0.008" numOctaves="2" result="noise" />
-
-        {/* Combine noise with edge mask — distortion only at edges */}
-        <feComposite in="noise" in2="softEdge" operator="in" result="edgeNoise" />
-
-        {/* Merge with neutral gray for displacement */}
-        <feFlood floodColor="#808080" result="neutral" />
-        <feMerge result="displacementMap">
-          <feMergeNode in="neutral" />
-          <feMergeNode in="edgeNoise" />
-        </feMerge>
-
-        {/* Apply displacement — edges shift, center stays clear */}
-        <feDisplacementMap in="SourceGraphic" in2="displacementMap" scale="20" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </svg>
+    <svg style={{ display: "none" }}></svg>
   );
 }
 
