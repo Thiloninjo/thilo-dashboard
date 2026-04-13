@@ -28,7 +28,7 @@ export function PageSwiper({ activeIndex, dragProgress, pages }: Props) {
   }, [offset, dragProgress]);
 
   return (
-    <div style={{ width: "100%", overflow: "visible" }}>
+    <div style={{ width: "100%", overflowX: "hidden", overflowY: "visible" }}>
       <div
         ref={containerRef}
         style={{

@@ -208,12 +208,18 @@ export function SOPs() {
             onClick={() => openWorkspace(ws.name)}
             className="relative cursor-pointer group"
           >
-            {/* Glass card — overflow visible for heads sticking out */}
+            {/* Glass card */}
             <div
-              className="liquid-glass liquid-glass-sop relative h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
+              className="relative h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
               style={{
+                borderRadius: "28px",
+                backdropFilter: "blur(16px) brightness(1.12) saturate(1.4)",
+                WebkitBackdropFilter: "blur(16px) brightness(1.12) saturate(1.4)",
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(255,255,255,0.25)",
+                boxShadow: "0 8px 40px rgba(0,0,0,0.25)",
                 overflow: "visible",
-                clipPath: "inset(-80px -10px 0 -10px round 0px 0px 28px 28px)",
+                clipPath: "inset(-80px -50px 0px -50px round 0 0 28px 28px)",
               }}
             >
               {/* Character image — bottom-aligned, head extends above panel */}
