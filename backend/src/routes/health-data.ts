@@ -34,23 +34,37 @@ healthDataRouter.post("/", (req, res) => {
   const body = req.body;
   console.log("[Health] Received:", JSON.stringify(body).slice(0, 500));
 
-  // Auto Export sends data in various formats — handle flexibly
+  // Auto Export sends: { data: { metrics: [{ name: "step_count", data: [{ qty: 123 }, ...] }] } }
   let steps = 0;
 
   if (typeof body.steps === "number") {
     steps = body.steps;
+  } else if (body.data?.metrics && Array.isArray(body.data.metrics)) {
+    // Auto Export Health Data app format
+    const stepMetric = body.data.metrics.find((m: any) =>
+      m.name?.toLowerCase().includes("step")
+    );
+    if (stepMetric && Array.isArray(stepMetric.data)) {
+      // Sum all step entries for today
+      const today = new Date().toISOString().slice(0, 10);
+      steps = Math.round(
+        stepMetric.data
+          .filter((d: any) => d.date?.startsWith(today) || d.start?.startsWith(today))
+          .reduce((sum: number, d: any) => sum + (Number(d.qty) || 0), 0)
+      );
+      // If no today entries, sum all
+      if (steps === 0) {
+        steps = Math.round(stepMetric.data.reduce((sum: number, d: any) => sum + (Number(d.qty) || 0), 0));
+      }
+    }
   } else if (body.data?.qty !== undefined) {
-    // Auto Export REST API format: { data: { qty: 1234 } }
     steps = Math.round(Number(body.data.qty));
-  } else if (body.metrics?.steps !== undefined) {
-    steps = Math.round(Number(body.metrics.steps));
   } else if (Array.isArray(body)) {
-    // Auto Export can send array of metrics
     const stepMetric = body.find((m: any) =>
-      m.name?.toLowerCase().includes("step") || m.type?.toLowerCase().includes("step")
+      m.name?.toLowerCase().includes("step")
     );
     if (stepMetric) {
-      steps = Math.round(Number(stepMetric.qty || stepMetric.value || stepMetric.data?.qty || 0));
+      steps = Math.round(Number(stepMetric.qty || stepMetric.value || 0));
     }
   }
 
