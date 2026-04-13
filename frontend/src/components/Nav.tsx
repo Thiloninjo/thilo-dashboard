@@ -117,6 +117,8 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
     }
     setDragLeft(null);
     onDragProgress(0);
+    // Reset so next click works
+    hasMoved.current = false;
   }
 
   return (
