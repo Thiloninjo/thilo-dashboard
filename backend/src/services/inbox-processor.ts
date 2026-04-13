@@ -15,6 +15,17 @@ interface Intent {
   sopFile?: string; // for sop: "Longform SOP.md"
 }
 
+// Normalize text for fuzzy matching — ignore hyphens, spaces, case
+function normalize(text: string): string {
+  return text.toLowerCase().replace(/[-–—_]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function fuzzyMatch(a: string, b: string): boolean {
+  const na = normalize(a);
+  const nb = normalize(b);
+  return na.includes(nb) || nb.includes(na);
+}
+
 const TODAY = () => new Date().toISOString().slice(0, 10);
 const NOW_TIME = () => new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
@@ -209,8 +220,8 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
       const dailies = habJson.data || [];
       const habitMatch = dailies.find((d: any) =>
         d.isDue && !d.completed && (
-          d.text.toLowerCase().includes(searchLower) ||
-          searchLower.includes(d.text.toLowerCase())
+          fuzzyMatch(d.text, searchText) ||
+          fuzzyMatch(searchText, d.text)
         )
       );
       if (habitMatch) {
@@ -236,8 +247,8 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
       const json = await res.json();
       const tasks = json.results || [];
       const match = tasks.find((t: any) =>
-        t.content.toLowerCase().includes(searchLower) ||
-        searchLower.includes(t.content.toLowerCase())
+        fuzzyMatch(t.content, searchText) ||
+        fuzzyMatch(searchText, t.content)
       );
       if (match) {
         const closeRes = await fetch(`https://todoist.com/api/v1/tasks/${match.id}/close`, {
@@ -277,8 +288,8 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
     });
 
     const matches = (events.data.items || []).filter((e) =>
-      (e.summary || "").toLowerCase().includes(searchLower) ||
-      searchLower.includes((e.summary || "").toLowerCase())
+      fuzzyMatch(e.summary || "", searchText) ||
+      fuzzyMatch(searchText, e.summary || "")
     );
 
     for (const match of matches) {
@@ -301,8 +312,8 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
       const json = await res.json();
       const tasks = json.results || [];
       const matches = tasks.filter((t: any) =>
-        t.content.toLowerCase().includes(searchLower) ||
-        searchLower.includes(t.content.toLowerCase())
+        fuzzyMatch(t.content, searchText) ||
+        fuzzyMatch(searchText, t.content)
       );
 
       for (const match of matches) {
