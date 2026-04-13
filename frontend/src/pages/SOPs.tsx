@@ -219,19 +219,9 @@ export function SOPs() {
             onClick={() => openWorkspace(ws.name)}
             className="relative cursor-pointer group"
           >
-            {/* Character image — sticks out of the top */}
-            {workspaceImages[ws.name] && (
-              <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
-                <img
-                  src={workspaceImages[ws.name]}
-                  alt={ws.name}
-                  className="h-40 object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300"
-                />
-              </div>
-            )}
-            {/* Glass card — clips the image at bottom */}
+            {/* Glass card */}
             <div
-              className="relative overflow-hidden rounded-3xl pt-24 pb-5 px-6 text-center transition-all duration-300 group-hover:scale-[1.02]"
+              className="relative overflow-hidden rounded-3xl h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
               style={{
                 backdropFilter: "blur(20px) saturate(180%)",
                 WebkitBackdropFilter: "blur(20px) saturate(180%)",
@@ -240,11 +230,25 @@ export function SOPs() {
                 boxShadow: "0 8px 32px rgba(0,0,0,0.25), inset 0 0 20px -5px rgba(255,255,255,0.2)",
               }}
             >
-              <div className="relative z-10">
-                <div className="text-xl font-bold text-white" style={{ textShadow: "0 2px 6px rgba(0,0,0,0.3)" }}>
+              {/* Character image — inside the panel, bottom-aligned, head sticks out top */}
+              {workspaceImages[ws.name] && (
+                <img
+                  src={workspaceImages[ws.name]}
+                  alt={ws.name}
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 h-[320px] object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300 pointer-events-none"
+                />
+              )}
+              {/* Text overlay at bottom */}
+              <div
+                className="absolute bottom-0 left-0 right-0 px-6 py-5 z-10"
+                style={{
+                  background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)",
+                }}
+              >
+                <div className="text-xl font-bold text-white" style={{ textShadow: "0 2px 6px rgba(0,0,0,0.5)" }}>
                   {ws.name}
                 </div>
-                <div className="text-sm text-white/50 mt-1 font-medium">
+                <div className="text-sm text-white/60 mt-0.5 font-medium" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
                   {ws.sopCount} SOPs
                 </div>
               </div>
