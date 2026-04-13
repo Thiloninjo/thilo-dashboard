@@ -1,85 +1,69 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
-// 96 frames: 0-47 = 00:00-11:45 (night to day), 48-95 = 12:00-23:45 (day to night)
-// Each frame = 15 minutes of real time
-const TOTAL_FRAMES = 96;
-const TRANSITION_DURATION = 3000; // 3 second crossfade
-
-function getFrameForTime(): number {
-  const now = new Date();
-  const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
-  // 1440 minutes in a day, 96 frames = 1 frame per 15 minutes
-  const frame = Math.floor(minutesSinceMidnight / 15);
-  return Math.min(frame, TOTAL_FRAMES - 1);
-}
-
-function getFrameUrl(index: number): string {
-  return `/wallpaper/time_${String(index).padStart(3, "0")}.jpg`;
-}
+// Combined video: ~30 seconds total
+// First half (0-15s): night → day (maps to 00:00-12:00)
+// Second half (15-30s): day → night (maps to 12:00-24:00)
 
 export function DynamicWallpaper() {
-  const [currentFrame, setCurrentFrame] = useState(getFrameForTime);
-  const [nextFrame, setNextFrame] = useState<number | null>(null);
-  const [opacity, setOpacity] = useState(1);
-  const intervalRef = useRef<ReturnType<typeof setInterval>>();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const durationRef = useRef(0);
+
+  function seekToCurrentTime() {
+    const video = videoRef.current;
+    if (!video || !durationRef.current) return;
+
+    const now = new Date();
+    const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes();
+    const dayProgress = minutesSinceMidnight / 1440; // 0.0 - 1.0
+
+    const targetTime = dayProgress * durationRef.current;
+    video.currentTime = targetTime;
+  }
 
   useEffect(() => {
-    // Check every 30 seconds if the frame should change
-    intervalRef.current = setInterval(() => {
-      const targetFrame = getFrameForTime();
-      if (targetFrame !== currentFrame) {
-        // Preload next frame
-        const img = new Image();
-        img.src = getFrameUrl(targetFrame);
-        img.onload = () => {
-          setNextFrame(targetFrame);
-          setOpacity(0); // Start fade to next frame
+    const video = videoRef.current;
+    if (!video) return;
 
-          // After transition, swap
-          setTimeout(() => {
-            setCurrentFrame(targetFrame);
-            setNextFrame(null);
-            setOpacity(1);
-          }, TRANSITION_DURATION);
-        };
+    function onLoaded() {
+      durationRef.current = video!.duration;
+      video!.pause(); // Don't play — we control the position manually
+      seekToCurrentTime();
+    }
+
+    video.addEventListener("loadedmetadata", onLoaded);
+
+    // Update position every 10 seconds for ultra-smooth progression
+    const interval = setInterval(() => {
+      if (durationRef.current) {
+        const now = new Date();
+        const minutesSinceMidnight = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
+        const dayProgress = minutesSinceMidnight / 1440;
+        const targetTime = dayProgress * durationRef.current;
+
+        // Smooth seek: only move if difference is noticeable
+        const diff = Math.abs((video.currentTime || 0) - targetTime);
+        if (diff > 0.01) {
+          video.currentTime = targetTime;
+        }
       }
-    }, 30_000);
+    }, 10_000);
 
-    return () => clearInterval(intervalRef.current);
-  }, [currentFrame]);
-
-  // Preload adjacent frames
-  useEffect(() => {
-    const prev = (currentFrame - 1 + TOTAL_FRAMES) % TOTAL_FRAMES;
-    const next = (currentFrame + 1) % TOTAL_FRAMES;
-    [prev, next].forEach((i) => {
-      const img = new Image();
-      img.src = getFrameUrl(i);
-    });
-  }, [currentFrame]);
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoaded);
+      clearInterval(interval);
+    };
+  }, []);
 
   return (
-    <div className="fixed inset-0 -z-10">
-      {/* Current frame */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${getFrameUrl(currentFrame)})`,
-          opacity: nextFrame !== null ? opacity : 1,
-          transition: `opacity ${TRANSITION_DURATION}ms ease-in-out`,
-        }}
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      <video
+        ref={videoRef}
+        src="/wallpaper-24h.mp4"
+        muted
+        playsInline
+        preload="auto"
+        className="absolute inset-0 w-full h-full object-cover"
       />
-      {/* Next frame (fades in on top) */}
-      {nextFrame !== null && (
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `url(${getFrameUrl(nextFrame)})`,
-            opacity: nextFrame !== null ? 1 - opacity : 0,
-            transition: `opacity ${TRANSITION_DURATION}ms ease-in-out`,
-          }}
-        />
-      )}
     </div>
   );
 }
