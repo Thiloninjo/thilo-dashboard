@@ -221,10 +221,12 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
   return { success: false };
 }
 
-async function deleteItem(searchText: string): Promise<{ success: boolean; item?: string; source?: string }> {
+async function deleteItem(searchText: string): Promise<{ success: boolean; item?: string; source?: string; count?: number }> {
   const searchLower = searchText.toLowerCase();
+  let deletedCount = 0;
+  let deletedNames: string[] = [];
 
-  // 1. Try Calendar
+  // 1. Try Calendar — delete ALL matches
   try {
     const tokenRaw = await readFile(CONFIG.google.tokenPath, "utf-8");
     const tokens = JSON.parse(tokenRaw);
@@ -243,18 +245,23 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
       singleEvents: true,
     });
 
-    const match = (events.data.items || []).find((e) =>
+    const matches = (events.data.items || []).filter((e) =>
       (e.summary || "").toLowerCase().includes(searchLower) ||
       searchLower.includes((e.summary || "").toLowerCase())
     );
 
-    if (match && match.id) {
-      await calendar.events.delete({ calendarId: "primary", eventId: match.id });
-      return { success: true, item: match.summary || "", source: "calendar" };
+    for (const match of matches) {
+      if (match.id) {
+        try {
+          await calendar.events.delete({ calendarId: "primary", eventId: match.id });
+          deletedCount++;
+          deletedNames.push(match.summary || "");
+        } catch {}
+      }
     }
   } catch {}
 
-  // 2. Try Todoist
+  // 2. Try Todoist — delete ALL matches
   try {
     const res = await fetch("https://todoist.com/api/v1/tasks/filter?query=today%20%7C%20overdue", {
       headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
@@ -262,19 +269,34 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
     if (res.ok) {
       const json = await res.json();
       const tasks = json.results || [];
-      const match = tasks.find((t: any) =>
+      const matches = tasks.filter((t: any) =>
         t.content.toLowerCase().includes(searchLower) ||
         searchLower.includes(t.content.toLowerCase())
       );
-      if (match) {
-        const delRes = await fetch(`https://todoist.com/api/v1/tasks/${match.id}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
-        });
-        if (delRes.ok) return { success: true, item: match.content, source: "todoist" };
+
+      for (const match of matches) {
+        try {
+          const delRes = await fetch(`https://todoist.com/api/v1/tasks/${match.id}`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
+          });
+          if (delRes.ok) {
+            deletedCount++;
+            deletedNames.push(match.content);
+          }
+        } catch {}
       }
     }
   } catch {}
+
+  if (deletedCount > 0) {
+    return {
+      success: true,
+      item: deletedCount > 1 ? `${deletedCount}x ${deletedNames[0]}` : deletedNames[0],
+      source: "calendar/todoist",
+      count: deletedCount,
+    };
+  }
 
   return { success: false };
 }
