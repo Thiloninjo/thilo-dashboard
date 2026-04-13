@@ -47,8 +47,8 @@ body {
   border-radius: 28px;
   transition: opacity 0.26s ease-out, transform 0.2s;
   filter: drop-shadow(-8px -10px 46px #0000005f);
-  backdrop-filter: brightness(1.1) blur(2px) url(#displacementFilter);
-  -webkit-backdrop-filter: brightness(1.1) blur(2px);
+  backdrop-filter: brightness(1.15) blur(1px) contrast(1.05) saturate(1.2);
+  -webkit-backdrop-filter: brightness(1.15) blur(1px) contrast(1.05) saturate(1.2);
 }
 
 .liquid-glass:hover {
@@ -81,8 +81,8 @@ body {
   position: relative;
   overflow: hidden;
   filter: drop-shadow(0 4px 20px #0000005f);
-  backdrop-filter: brightness(1.1) blur(2px) url(#displacementFilter);
-  -webkit-backdrop-filter: brightness(1.1) blur(2px);
+  backdrop-filter: brightness(1.15) blur(1px) contrast(1.05) saturate(1.2);
+  -webkit-backdrop-filter: brightness(1.15) blur(1px) contrast(1.05) saturate(1.2);
 }
 
 .liquid-glass-nav::before {
