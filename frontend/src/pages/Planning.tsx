@@ -34,13 +34,20 @@ export function Planning() {
 
   // Fetch events + tasks for selected date
   useEffect(() => {
+    let cancelled = false;
+
+    setEvents([]);
+    setTasks([]);
+
     apiFetch<CachedResponse<CalendarEvent[]>>(`/calendar/date/${dateStr}`)
-      .then((r) => setEvents(r.data))
-      .catch(() => setEvents([]));
+      .then((r) => { if (!cancelled) setEvents(r.data); })
+      .catch(() => { if (!cancelled) setEvents([]); });
 
     apiFetch<CachedResponse<Task[]>>(`/tasks/todoist/date/${dateStr}`)
-      .then((r) => setTasks(r.data))
-      .catch(() => setTasks([]));
+      .then((r) => { if (!cancelled) setTasks(r.data); })
+      .catch(() => { if (!cancelled) setTasks([]); });
+
+    return () => { cancelled = true; };
   }, [dateStr]);
 
   // Calendar grid
@@ -60,7 +67,7 @@ export function Planning() {
   }
 
   function selectDay(day: number) {
-    const date = new Date(year, month, day);
+    const date = new Date(year, month, day, 12, 0, 0); // noon to avoid timezone edge cases
     setSelectedDate(date);
   }
 

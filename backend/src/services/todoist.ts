@@ -15,8 +15,15 @@ async function todoistFetch(path: string, options: RequestInit = {}): Promise<Re
 }
 
 export async function getTasksForDate(date?: string): Promise<TodoistTask[]> {
-  const query = date ? encodeURIComponent(date) : "today%20%7C%20overdue";
-  const res = await todoistFetch(`/tasks/filter?query=${query}`);
+  // Todoist filter API needs date format like "Apr 14" or "2026-04-14"
+  let query: string;
+  if (!date) {
+    query = "today | overdue";
+  } else {
+    // Convert YYYY-MM-DD to "YYYY-MM-DD" — Todoist understands this
+    query = date;
+  }
+  const res = await todoistFetch(`/tasks/filter?query=${encodeURIComponent(query)}`);
   if (!res.ok) throw new Error(`Todoist API error: ${res.status}`);
   const json = await res.json();
   const tasks = json.results || json;
