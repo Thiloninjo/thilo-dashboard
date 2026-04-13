@@ -27,8 +27,8 @@ export function PageSwiper({ activeIndex, dragProgress, pages }: Props) {
   }, [offset, dragProgress]);
 
   return (
-    // Outer wrapper clips to exactly the content area — no neighbor pages visible
-    <div style={{ overflow: "hidden", margin: "0 -28px", padding: "0 28px" }}>
+    // Outer wrapper clips — no neighbor pages visible
+    <div style={{ overflow: "hidden", width: "100%" }}>
       <div
         ref={containerRef}
         style={{

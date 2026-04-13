@@ -31,12 +31,16 @@ function LiquidGlassFilter() {
 
 export const TAB_LABELS = ["Heute", "Change-Log", "SOPs", "AI-Edge", "Personal Dev"];
 
+function PageWrap({ children }: { children: React.ReactNode }) {
+  return <div className="max-w-[1400px] mx-auto px-7 py-7">{children}</div>;
+}
+
 const pages = [
-  <Heute key="heute" />,
-  <ChangeLog key="changelog" />,
-  <SOPs key="sops" />,
-  <AIEdge key="aiedge" />,
-  <PersonalDev key="personaldev" />,
+  <PageWrap key="heute"><Heute /></PageWrap>,
+  <PageWrap key="changelog"><ChangeLog /></PageWrap>,
+  <PageWrap key="sops"><SOPs /></PageWrap>,
+  <PageWrap key="aiedge"><AIEdge /></PageWrap>,
+  <PageWrap key="personaldev"><PersonalDev /></PageWrap>,
 ];
 
 export default function App() {
@@ -61,7 +65,7 @@ export default function App() {
         onSelect={handleNavSelect}
         onDragProgress={handleNavDrag}
       />
-      <main className="max-w-[1400px] mx-auto p-7">
+      <main className="w-full">
         <PageSwiper
           activeIndex={activeIndex}
           dragProgress={dragProgress}
