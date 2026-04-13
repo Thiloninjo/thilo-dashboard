@@ -2,7 +2,7 @@ import { simpleGit } from "simple-git";
 import { ChangeLogEntry } from "../types.js";
 import { CONFIG } from "../config.js";
 
-const SOP_COMMIT_REGEX = /^SOP (.+?): (.+?) \(Quelle: (.+)\)$/;
+const SOP_COMMIT_REGEX = /^(?:SOP|SOP-Hinweis) (.+?): (.+?) \(Quelle: (.+)\)$/;
 
 export function parseCommitLine(line: string): ChangeLogEntry | null {
   const parts = line.split("|");
