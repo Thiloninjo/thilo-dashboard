@@ -16,11 +16,9 @@ export function GlassCard({ children, className = "", glow = false, onClick }: P
       transition={{ duration: 0.3 }}
       onClick={onClick}
       className={`
-        bg-surface-raised backdrop-blur-2xl rounded-2xl
-        border border-border hover:border-border-hover
-        transition-colors p-5
-        ${glow ? "shadow-[0_0_30px_rgba(99,102,241,0.08)]" : ""}
-        ${onClick ? "cursor-pointer" : ""}
+        liquid-glass p-5
+        ${glow ? "shadow-[0_0_40px_rgba(0,122,255,0.12)]" : ""}
+        ${onClick ? "liquid-glass-interactive" : ""}
         ${className}
       `}
     >
@@ -38,7 +36,7 @@ export function CardHeader({ title, badge, badgeColor = "text-accent" }: {
     <div className="flex justify-between items-center mb-4">
       <span className="text-[10px] uppercase tracking-[1.2px] text-text-muted font-semibold">{title}</span>
       {badge && (
-        <span className={`text-[10px] px-2 py-0.5 rounded-md bg-surface-raised ${badgeColor} font-semibold`}>
+        <span className={`text-[10px] px-2 py-0.5 rounded-md bg-white/5 ${badgeColor} font-semibold`}>
           {badge}
         </span>
       )}

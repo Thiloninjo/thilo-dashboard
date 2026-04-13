@@ -10,20 +10,20 @@ const tabs = [
 
 export function Nav() {
   return (
-    <nav className="flex items-center px-7 py-4 border-b border-border sticky top-0 z-10 backdrop-blur-xl bg-surface/80">
-      <div className="text-base font-extrabold tracking-tight bg-gradient-to-r from-accent-light to-accent bg-clip-text text-transparent">
+    <nav className="liquid-glass-nav flex items-center px-7 py-4 sticky top-0 z-10">
+      <div className="text-base font-extrabold tracking-tight text-white/90">
         THILO
       </div>
-      <div className="flex gap-0.5 ml-auto bg-surface-raised rounded-xl p-0.5">
+      <div className="flex gap-0.5 ml-auto bg-white/5 rounded-2xl p-1">
         {tabs.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
             className={({ isActive }) =>
-              `px-4 py-1.5 text-xs rounded-lg transition-all ${
+              `px-4 py-1.5 text-xs rounded-xl transition-all ${
                 isActive
-                  ? "bg-accent/15 text-accent-light font-semibold shadow-[0_0_20px_rgba(99,102,241,0.1)]"
-                  : "text-text-muted hover:text-text-secondary"
+                  ? "bg-white/15 text-white font-semibold shadow-[0_0_20px_rgba(255,255,255,0.08)]"
+                  : "text-white/50 hover:text-white/70"
               }`
             }
           >

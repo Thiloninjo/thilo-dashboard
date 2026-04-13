@@ -1,10 +1,10 @@
 export function StatusPill({ label, active = false }: { label: string; active?: boolean }) {
   return (
     <span
-      className={`px-3 py-1 rounded-full text-[11px] font-semibold border ${
+      className={`px-3 py-1 rounded-full text-[11px] font-semibold border backdrop-blur-sm ${
         active
-          ? "bg-accent/12 border-accent/25 text-accent-light"
-          : "bg-white/4 border-white/8 text-text-secondary"
+          ? "bg-white/15 border-white/25 text-white"
+          : "bg-white/5 border-white/10 text-white/60"
       }`}
     >
       {label}
