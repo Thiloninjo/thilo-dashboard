@@ -15,13 +15,15 @@ async function todoistFetch(path: string, options: RequestInit = {}): Promise<Re
 }
 
 export async function getTasksForDate(date?: string): Promise<TodoistTask[]> {
-  // Todoist filter API needs date format like "Apr 14" or "2026-04-14"
+  // Todoist filter: use natural language date format
   let query: string;
   if (!date) {
     query = "today | overdue";
   } else {
-    // Convert YYYY-MM-DD to "YYYY-MM-DD" — Todoist understands this
-    query = date;
+    // Format as "Apr 16 2026" for Todoist
+    const d = new Date(date + "T12:00:00");
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    query = `${months[d.getMonth()]} ${d.getDate()} ${d.getFullYear()}`;
   }
   const res = await todoistFetch(`/tasks/filter?query=${encodeURIComponent(query)}`);
   if (!res.ok) throw new Error(`Todoist API error: ${res.status}`);
@@ -29,7 +31,15 @@ export async function getTasksForDate(date?: string): Promise<TodoistTask[]> {
   const tasks = json.results || json;
 
   return tasks
-    .filter((t: any) => !t.checked)
+    .filter((t: any) => {
+      if (t.checked) return false;
+      // If filtering by specific date, only return exact matches
+      if (date && t.due?.date) {
+        const taskDate = t.due.date.slice(0, 10);
+        return taskDate === date;
+      }
+      return true;
+    })
     .map((t: any) => ({
       id: t.id,
       content: t.content,
