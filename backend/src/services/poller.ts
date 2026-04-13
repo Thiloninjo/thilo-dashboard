@@ -4,8 +4,8 @@ import { getAllHabits } from "./habitica.js";
 import { cacheSet } from "../cache.js";
 import { broadcastApiUpdate } from "./file-watcher.js";
 
-// Todoist: 450 req/15min limit → 2s = ~450 req/15min (max speed)
-const TODOIST_INTERVAL = 2_000;
+// Todoist: 450 req/15min limit — 15s safe for two instances (local + server)
+const TODOIST_INTERVAL = 15_000;
 // Calendar + Habitica change less often
 const CALENDAR_INTERVAL = 30_000;
 const HABITICA_INTERVAL = 120_000; // 2 minutes — habits don't change often
