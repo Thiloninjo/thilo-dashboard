@@ -61,7 +61,7 @@ export default function App() {
         onSelect={handleNavSelect}
         onDragProgress={handleNavDrag}
       />
-      <main className="max-w-[1400px] mx-auto p-7 overflow-hidden">
+      <main className="max-w-[1400px] mx-auto p-7">
         <PageSwiper
           activeIndex={activeIndex}
           dragProgress={dragProgress}

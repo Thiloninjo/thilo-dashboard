@@ -11,25 +11,24 @@ interface Props {
 export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [tabPositions, setTabPositions] = useState<{ left: number; width: number; center: number }[]>([]);
 
-  const [tabPositions, setTabPositions] = useState<{ left: number; width: number }[]>([]);
-
-  // Drag state
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
-  const dragStartIndex = useRef(0);
+  const dragStartIndicatorLeft = useRef(0);
   const hasMoved = useRef(false);
-  const [dragIndicatorLeft, setDragIndicatorLeft] = useState<number | null>(null);
+  const [dragLeft, setDragLeft] = useState<number | null>(null);
 
-  // Measure all tab positions
+  // Measure tabs
   const measureAll = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
-    const containerRect = container.getBoundingClientRect();
+    const cr = container.getBoundingClientRect();
     const positions = tabRefs.current.map((el) => {
-      if (!el) return { left: 0, width: 0 };
+      if (!el) return { left: 0, width: 0, center: 0 };
       const r = el.getBoundingClientRect();
-      return { left: r.left - containerRect.left, width: r.width };
+      const left = r.left - cr.left;
+      return { left, width: r.width, center: left + r.width / 2 };
     });
     setTabPositions(positions);
   }, []);
@@ -40,39 +39,36 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
     return () => window.removeEventListener("resize", measureAll);
   }, [measureAll]);
 
-  const activePos = tabPositions[activeIndex] || { left: 0, width: 0 };
+  const activePos = tabPositions[activeIndex] || { left: 0, width: 0, center: 0 };
 
-  // Convert drag pixel offset to fractional tab progress
-  function pixelToProgress(indicatorLeft: number): number {
-    if (tabPositions.length === 0) return 0;
-    // Find which two tabs we're between
+  // Map indicator center position to a continuous page index (0, 0.5, 1, 1.5, etc.)
+  function indicatorToPageIndex(left: number): number {
+    if (tabPositions.length < 2) return 0;
+    const center = left + activePos.width / 2;
+
+    // Before first tab
+    if (center <= tabPositions[0].center) return 0;
+    // After last tab
+    if (center >= tabPositions[tabPositions.length - 1].center) return tabPositions.length - 1;
+
+    // Between two tabs — linear interpolation
     for (let i = 0; i < tabPositions.length - 1; i++) {
-      const thisCenter = tabPositions[i].left + tabPositions[i].width / 2;
-      const nextCenter = tabPositions[i + 1].left + tabPositions[i + 1].width / 2;
-      const dragCenter = indicatorLeft + activePos.width / 2;
-      if (dragCenter >= thisCenter && dragCenter <= nextCenter) {
-        const frac = (dragCenter - thisCenter) / (nextCenter - thisCenter);
-        return i + frac - activeIndex;
+      const c1 = tabPositions[i].center;
+      const c2 = tabPositions[i + 1].center;
+      if (center >= c1 && center <= c2) {
+        return i + (center - c1) / (c2 - c1);
       }
     }
-    // Clamp to edges
-    const firstCenter = tabPositions[0].left + tabPositions[0].width / 2;
-    const lastCenter = tabPositions[tabPositions.length - 1].left + tabPositions[tabPositions.length - 1].width / 2;
-    const dragCenter = indicatorLeft + activePos.width / 2;
-    if (dragCenter < firstCenter) return -activeIndex;
-    return (tabPositions.length - 1) - activeIndex;
+    return 0;
   }
 
-  function findClosestTab(indicatorLeft: number): number {
-    const dragCenter = indicatorLeft + activePos.width / 2;
+  function findClosestTab(left: number): number {
+    const center = left + activePos.width / 2;
     let closest = 0;
     let minDist = Infinity;
     tabPositions.forEach((pos, i) => {
-      const center = pos.left + pos.width / 2;
-      if (Math.abs(dragCenter - center) < minDist) {
-        minDist = Math.abs(dragCenter - center);
-        closest = i;
-      }
+      const dist = Math.abs(center - pos.center);
+      if (dist < minDist) { minDist = dist; closest = i; }
     });
     return closest;
   }
@@ -83,13 +79,13 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
     const rect = container.getBoundingClientRect();
     const x = e.clientX - rect.left;
 
-    // Only drag if clicking near the indicator
-    if (x < activePos.left - 15 || x > activePos.left + activePos.width + 15) return;
+    // Only start drag near the active indicator
+    if (x < activePos.left - 20 || x > activePos.left + activePos.width + 20) return;
 
     isDragging.current = true;
     hasMoved.current = false;
     dragStartX.current = e.clientX;
-    dragStartIndex.current = activeIndex;
+    dragStartIndicatorLeft.current = activePos.left;
     container.setPointerCapture(e.pointerId);
     e.preventDefault();
   }
@@ -101,13 +97,13 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
     if (Math.abs(dx) > 3) hasMoved.current = true;
     if (!hasMoved.current) return;
 
-    const maxLeft = containerRef.current.getBoundingClientRect().width - 12 - activePos.width;
-    const newLeft = Math.max(0, Math.min(activePos.left + dx, maxLeft));
-    setDragIndicatorLeft(newLeft);
+    const containerWidth = containerRef.current.getBoundingClientRect().width - 12;
+    const newLeft = Math.max(0, Math.min(dragStartIndicatorLeft.current + dx, containerWidth - activePos.width));
+    setDragLeft(newLeft);
 
-    // Tell App how far between pages we are
-    const progress = pixelToProgress(newLeft);
-    onDragProgress(progress);
+    // Calculate continuous page index and send progress relative to activeIndex
+    const pageIndex = indicatorToPageIndex(newLeft);
+    onDragProgress(pageIndex - activeIndex);
   }
 
   function handlePointerUp(e: React.PointerEvent) {
@@ -115,16 +111,13 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
     isDragging.current = false;
     containerRef.current?.releasePointerCapture(e.pointerId);
 
-    if (hasMoved.current && dragIndicatorLeft !== null) {
-      const closest = findClosestTab(dragIndicatorLeft);
+    if (hasMoved.current && dragLeft !== null) {
+      const closest = findClosestTab(dragLeft);
       onSelect(closest);
     }
-    setDragIndicatorLeft(null);
+    setDragLeft(null);
     onDragProgress(0);
   }
-
-  const indicatorLeft = dragIndicatorLeft ?? activePos.left;
-  const indicatorWidth = activePos.width;
 
   return (
     <nav className="sticky top-4 z-10 flex justify-center px-7 pt-4">
@@ -152,13 +145,13 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
             border: "1px solid rgba(255,255,255,0.18)",
           }}
           animate={
-            dragIndicatorLeft !== null
-              ? { left: indicatorLeft, width: indicatorWidth }
+            dragLeft !== null
+              ? { left: dragLeft, width: activePos.width }
               : { left: activePos.left, width: activePos.width }
           }
           transition={
-            dragIndicatorLeft !== null
-              ? { type: "tween", duration: 0 }
+            dragLeft !== null
+              ? { duration: 0 }
               : { type: "spring", stiffness: 400, damping: 32 }
           }
         />
@@ -168,9 +161,7 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
           <button
             key={label}
             ref={(el) => { tabRefs.current[i] = el; }}
-            onClick={() => {
-              if (!hasMoved.current) onSelect(i);
-            }}
+            onClick={() => { if (!hasMoved.current) onSelect(i); }}
             className={`relative z-10 px-5 py-2 text-[13px] rounded-full transition-colors select-none ${
               i === activeIndex
                 ? "text-white font-bold"
