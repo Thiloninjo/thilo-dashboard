@@ -219,22 +219,29 @@ export function SOPs() {
             onClick={() => openWorkspace(ws.name)}
             className="relative cursor-pointer group"
           >
-            {/* Character image — positioned OUTSIDE overflow, head sticks out */}
+            {/* Character image — clip bottom to panel edge, head sticks out top */}
             {workspaceImages[ws.name] && (
-              <img
-                src={workspaceImages[ws.name]}
-                alt={ws.name}
-                className="absolute z-20 pointer-events-none drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300"
+              <div
+                className="absolute z-20 pointer-events-none"
                 style={{
-                  height: "330px",
-                  bottom: "-6px",
+                  bottom: "0px",
+                  top: "auto",
+                  // Clip: allow overflow at top (heads), but cut at bottom of panel
+                  clipPath: "inset(-100px 0 0 0)",
                   ...(ws.name === "Tennis-Ring-Lual"
-                    ? { right: "5%", left: "auto", transform: "none" }
-                    : { right: "15%", left: "auto", transform: "none" }),
+                    ? { right: "5%", left: "auto" }
+                    : { right: "10%", left: "auto" }),
                 }}
-              />
+              >
+                <img
+                  src={workspaceImages[ws.name]}
+                  alt={ws.name}
+                  className="drop-shadow-[0_8px_24px_rgba(0,0,0,0.4)] group-hover:scale-105 transition-transform duration-300"
+                  style={{ height: "330px" }}
+                />
+              </div>
             )}
-            {/* Glass card — overflow visible so heads stick out */}
+            {/* Glass card */}
             <div
               className="relative rounded-3xl h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
               style={{
