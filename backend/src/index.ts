@@ -10,6 +10,7 @@ import { weeklyGoalsRouter } from "./routes/weekly-goals.js";
 import { changelogRouter } from "./routes/changelog.js";
 import { sopsRouter } from "./routes/sops.js";
 import { inboxRouter } from "./routes/inbox.js";
+import { healthDataRouter } from "./routes/health-data.js";
 import { startFileWatcher } from "./services/file-watcher.js";
 import { startPolling } from "./services/poller.js";
 // Handy-Note-Watcher disabled locally — runs on server only
@@ -30,6 +31,7 @@ app.use("/api/weekly-goals", weeklyGoalsRouter);
 app.use("/api/changelog", changelogRouter);
 app.use("/api/sops", sopsRouter);
 app.use("/api/inbox", inboxRouter);
+app.use("/api/health-data", healthDataRouter);
 
 const server = createServer(app);
 startFileWatcher(server);

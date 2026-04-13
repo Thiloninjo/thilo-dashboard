@@ -23,19 +23,16 @@ function Cloud({ data }: { data: PointData }) {
     return [pos, col];
   }, [data]);
 
-  // Subtle rotation following mouse
-  useFrame(() => {
+  // Auto-rotate slowly, oscillating ±20° around center
+  useFrame(({ clock }) => {
     if (!ref.current) return;
-    ref.current.rotation.y = THREE.MathUtils.lerp(
-      ref.current.rotation.y,
-      pointer.x * 0.25,
-      0.03
-    );
-    ref.current.rotation.x = THREE.MathUtils.lerp(
-      ref.current.rotation.x,
-      pointer.y * 0.12,
-      0.03
-    );
+    const t = clock.getElapsedTime();
+    // Gentle oscillation: Math.sin gives smooth back-and-forth
+    const autoRotateY = Math.sin(t * 0.3) * 0.2; // ±12°
+    const autoRotateX = Math.sin(t * 0.2) * 0.05; // ±3° subtle vertical
+
+    ref.current.rotation.y = Math.PI + autoRotateY;
+    ref.current.rotation.x = autoRotateX;
   });
 
   return (
@@ -55,11 +52,11 @@ function Cloud({ data }: { data: PointData }) {
         />
       </bufferGeometry>
       <pointsMaterial
-        size={0.012}
+        size={0.006}
         vertexColors
         sizeAttenuation
         transparent
-        opacity={0.9}
+        opacity={0.95}
         depthWrite={false}
       />
     </points>
@@ -97,7 +94,7 @@ export function PointCloudViewer() {
   }
 
   return (
-    <div className="h-[500px] rounded-3xl overflow-hidden">
+    <div className="w-full h-full">
       <Canvas
         camera={{ position: [0, 0, 2.5], fov: 50 }}
         style={{ background: "transparent" }}

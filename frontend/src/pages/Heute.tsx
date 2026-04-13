@@ -3,6 +3,7 @@ import { KpiHeader } from "./heute/KpiHeader";
 import { ProfileCard } from "./heute/ProfileCard";
 import { HabitsCard } from "./heute/HabitsCard";
 import { CalendarCard } from "./heute/CalendarCard";
+import { StepsCard } from "./heute/StepsCard";
 import { WeeklyGoalsCard } from "./heute/WeeklyGoalsCard";
 import { TasksCard } from "./heute/TasksCard";
 import { apiFetch } from "../lib/api";
@@ -84,6 +85,7 @@ export function Heute() {
       <div className="grid grid-cols-[280px_1fr_280px] gap-4">
         <div className="flex flex-col gap-4">
           <ProfileCard />
+          <StepsCard />
           <HabitsCard habits={habits} onScore={handleScore} />
         </div>
         <div className="flex flex-col gap-4">
