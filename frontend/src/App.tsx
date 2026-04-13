@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { Nav } from "./components/Nav";
 import { PageSwiper } from "./components/PageSwiper";
 import { CommandBar } from "./components/CommandBar";
+import { DynamicWallpaper } from "./components/DynamicWallpaper";
 import { Heute } from "./pages/Heute";
 import { ChangeLog } from "./pages/ChangeLog";
 import { SOPs } from "./pages/SOPs";
@@ -60,6 +61,7 @@ export default function App() {
 
   return (
     <>
+      <DynamicWallpaper />
       <LiquidGlassFilter />
       <Nav
         activeIndex={activeIndex}
