@@ -28,8 +28,8 @@ export function PageSwiper({ activeIndex, dragProgress, pages }: Props) {
   }, [offset, dragProgress]);
 
   return (
-    // Outer wrapper clips — no neighbor pages visible
-    <div style={{ overflow: "hidden", width: "100%" }}>
+    // Outer wrapper — clip horizontally but allow vertical overflow for shadows
+    <div style={{ overflow: "clip", overflowClipMargin: "20px", width: "100%" }}>
       <div
         ref={containerRef}
         style={{

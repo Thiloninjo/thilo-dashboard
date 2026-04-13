@@ -133,15 +133,8 @@ export function SOPs() {
       <>
         <button
           onClick={goBack}
-          className="mb-4 px-4 py-2 rounded-full text-sm text-white font-semibold flex items-center gap-2"
-          style={{
-            backdropFilter: "blur(20px) saturate(180%)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            background: "rgba(255,255,255,0.1)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.2), inset 0 0 8px rgba(255,255,255,0.1)",
-            textShadow: "0 1px 3px rgba(0,0,0,0.3)",
-          }}
+          className="liquid-glass mb-4 px-4 py-2 !rounded-full text-sm text-white font-semibold flex items-center gap-2"
+          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}
         >
           ← Zurück
         </button>
@@ -175,15 +168,8 @@ export function SOPs() {
       <>
         <button
           onClick={goBack}
-          className="mb-4 px-4 py-2 rounded-full text-sm text-white font-semibold flex items-center gap-2"
-          style={{
-            backdropFilter: "blur(20px) saturate(180%)",
-            WebkitBackdropFilter: "blur(20px) saturate(180%)",
-            background: "rgba(255,255,255,0.1)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.2), inset 0 0 8px rgba(255,255,255,0.1)",
-            textShadow: "0 1px 3px rgba(0,0,0,0.3)",
-          }}
+          className="liquid-glass mb-4 px-4 py-2 !rounded-full text-sm text-white font-semibold flex items-center gap-2"
+          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}
         >
           ← Zurück
         </button>
@@ -222,16 +208,11 @@ export function SOPs() {
             onClick={() => openWorkspace(ws.name)}
             className="relative cursor-pointer group"
           >
-            {/* Glass card — clips sides and bottom via clip-path, top is open for heads */}
+            {/* Glass card */}
             <div
-              className="relative rounded-3xl h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
+              className="liquid-glass relative h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
               style={{
-                backdropFilter: "blur(20px) saturate(180%)",
-                WebkitBackdropFilter: "blur(20px) saturate(180%)",
-                background: "rgba(255,255,255,0.1)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                boxShadow: "0 8px 32px rgba(0,0,0,0.25), inset 0 0 20px -5px rgba(255,255,255,0.2)",
-                clipPath: "inset(-80px 0 0 0 round 0px 0px 24px 24px)",
+                clipPath: "inset(-80px 0 0 0 round 0px 0px 28px 28px)",
               }}
             >
               {/* Character image — inside panel, bottom-aligned, head extends above */}
