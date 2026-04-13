@@ -6,11 +6,13 @@ import Anthropic from "@anthropic-ai/sdk";
 // === Intent Detection via Claude Haiku ===
 
 interface Intent {
-  type: "task" | "calendar" | "complete" | "delete" | "note";
+  type: "task" | "calendar" | "complete" | "delete" | "sop" | "note";
   title: string;
   time?: string; // HH:MM
   date?: string; // YYYY-MM-DD
   searchTerm?: string; // for complete/delete: what to search for
+  sopWorkspace?: string; // for sop: "Tennis-Ring-Lual" or "Cavy"
+  sopFile?: string; // for sop: "Longform SOP.md"
 }
 
 const TODAY = () => new Date().toISOString().slice(0, 10);
@@ -46,7 +48,24 @@ Mögliche Intents:
 - "calendar": Ein Termin mit Zeit/Datum (Meeting, Arzt, Fitnessstudio, Event)
 - "complete": Etwas wurde erledigt/abgehakt ("hab X gemacht", "X erledigt", "X fertig", "X genommen")
 - "delete": Etwas soll gelöscht/entfernt werden ("lösch X", "nimm X raus", "X absagen")
+- "sop": Best Practice, Tipp oder Learning fuer eine Video-Produktion SOP
 - "note": Alles andere (Idee, Erkenntnis, Reflexion, unklar)
+
+SOP-ERKENNUNG — verfuegbare SOPs:
+Workspace "Tennis-Ring-Lual":
+  - "Dreh Learnings.md" = Tennis Filming SOP (alles rund ums Tennis-Filmen, Kamera, Dreh)
+  - "Longform SOP.md" = Longform SOP (lange Tennis-Videos, Edits)
+  - "Tippvideo SOP.md" = Tippvideo SOP (kurze Tennis-Tipp-Videos)
+  - "Trainingsvideo SOP.md" = Trainingsvideo SOP (Trainings-Clips)
+  - "Studio-Video SOP.md" = Studio/Reaction Videos
+  - "Quality Control SOP.md" = Quality Control (Maiks QC-Prozess)
+Workspace "Cavy":
+  - "Filming SOP.md" = Vlog Filming SOP (Vlog-Drehs, Daily Vlogs)
+  - "Vlog Editing SOP.md" = Vlog Editing SOP (Vlog-Schnitt)
+
+Bei "sop": Gib zusaetzlich "sopWorkspace" und "sopFile" an.
+Beispiel: "Bei Langform-Videos immer Stativ mitnehmen" →
+{"type":"sop","title":"Immer Stativ mitnehmen","sopWorkspace":"Tennis-Ring-Lual","sopFile":"Longform SOP.md"}
 
 WICHTIG — Verschieben/Ändern:
 Wenn jemand sagt "Termin X hat sich auf Y verschoben" oder "verschieb X auf Y", dann sind das ZWEI Intents:
@@ -56,7 +75,7 @@ Beispiel: "Team-Meeting hat sich auf 16 Uhr verschoben" →
 [{"type":"delete","title":"Team-Meeting","searchTerm":"Team-Meeting"},{"type":"calendar","title":"Team-Meeting","date":"2026-04-13","time":"16:00"}]
 
 Antworte NUR mit einem JSON-Array:
-[{"type":"...","title":"kurzer sauberer Titel","date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"Suchbegriff fuer complete/delete"}]
+[{"type":"...","title":"kurzer sauberer Titel","date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"Suchbegriff fuer complete/delete","sopWorkspace":"nur bei sop","sopFile":"nur bei sop"}]
 
 Regeln:
 - IMMER ein Array zurückgeben, auch bei nur einem Intent: [{"type":"task",...}]
@@ -92,6 +111,8 @@ NUR JSON-Array, kein anderer Text.`
       time: json.time || undefined,
       date: json.date || TODAY(),
       searchTerm: json.searchTerm || json.title || text,
+      sopWorkspace: json.sopWorkspace || undefined,
+      sopFile: json.sopFile || undefined,
     }));
   } catch (err) {
     console.error("[Inbox AI] Parse error:", err);
@@ -301,6 +322,45 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
   return { success: false };
 }
 
+async function addToSOP(title: string, workspace: string, sopFile: string): Promise<{ success: boolean }> {
+  const { join } = await import("path");
+  const { readFile: rf, writeFile: wf } = await import("fs/promises");
+  const { simpleGit } = await import("simple-git");
+
+  const vaultPath = CONFIG.vaultPath;
+  const filePath = join(vaultPath, "4- Workspaces", workspace, "01_SOPs", sopFile);
+
+  try {
+    let content = await rf(filePath, "utf-8");
+    const today = new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+
+    // Find Ausarbeitungs-Queue section and add entry
+    const queueMatch = content.match(/## Ausarbeitungs-Queue\n/);
+    if (queueMatch && queueMatch.index !== undefined) {
+      const insertPos = queueMatch.index + queueMatch[0].length;
+      content = content.slice(0, insertPos) + `- [ ] ${title}\n` + content.slice(insertPos);
+    } else {
+      // No queue section — append one
+      content += `\n## Ausarbeitungs-Queue\n- [ ] ${title}\n`;
+    }
+
+    await wf(filePath, content, "utf-8");
+
+    // Git commit
+    const git = simpleGit(vaultPath);
+    await git.add(filePath);
+    await git.commit(`SOP ${sopFile.replace(".md", "")}: ${title} (Quelle: Spracheingabe ${today})`);
+
+    // Push if possible
+    try { await git.push(); } catch {}
+
+    return { success: true };
+  } catch (err) {
+    console.error("SOP write failed:", err);
+    return { success: false };
+  }
+}
+
 // === Main Processor ===
 
 export interface InboxResult {
@@ -346,6 +406,18 @@ async function executeIntent(intent: Intent): Promise<{ success: boolean; messag
         message: result.success
           ? `Geloescht: "${result.item}"`
           : `Nicht gefunden: "${intent.searchTerm}"`,
+      };
+    }
+    case "sop": {
+      if (!intent.sopWorkspace || !intent.sopFile) {
+        return { success: false, message: `SOP nicht erkannt fuer: "${intent.title}"` };
+      }
+      const result = await addToSOP(intent.title, intent.sopWorkspace, intent.sopFile);
+      return {
+        success: result.success,
+        message: result.success
+          ? `SOP: "${intent.title}" → ${intent.sopFile}`
+          : `SOP konnte nicht aktualisiert werden`,
       };
     }
     case "note":
