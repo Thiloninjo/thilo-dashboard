@@ -40,12 +40,27 @@ function getPriority(relativePath: string): "high" | "low" {
   return HIGH_PRIORITY_PATTERNS.some((p) => relativePath.includes(p)) ? "high" : "low";
 }
 
+// Auto-pull vault from GitHub every 30 seconds (picks up server-side SOP commits)
+async function startVaultSync(): Promise<void> {
+  const { simpleGit } = await import("simple-git");
+  const git = simpleGit(CONFIG.vaultPath);
+
+  setInterval(async () => {
+    try {
+      await git.pull("origin", "master", { "--quiet": null });
+    } catch {}
+  }, 30_000);
+}
+
 export function startFileWatcher(server: import("http").Server): void {
   wss = new WebSocketServer({ server, path: "/ws" });
 
   wss.on("connection", (ws) => {
     ws.send(JSON.stringify({ type: "connected" }));
   });
+
+  // Start auto-pull for server-side changes
+  startVaultSync();
 
   const watcher = chokidar.watch(CONFIG.vaultPath, {
     persistent: true,
