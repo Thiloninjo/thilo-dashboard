@@ -108,6 +108,14 @@ body {
   transform: translateY(0);
 }
 
+/* SOP workspace cards — allow images to stick out of top */
+.liquid-glass-sop {
+  overflow: visible !important;
+}
+.liquid-glass-sop::before {
+  overflow: visible !important;
+}
+
 /* =====================================================
    TEXT READABILITY on glass (Apple's approach)
    ===================================================== */

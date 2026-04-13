@@ -210,7 +210,7 @@ export function SOPs() {
           >
             {/* Glass card — overflow visible for heads sticking out */}
             <div
-              className="liquid-glass relative h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
+              className="liquid-glass liquid-glass-sop relative h-[280px] transition-all duration-300 group-hover:scale-[1.02]"
               style={{
                 overflow: "visible",
                 clipPath: "inset(-80px -10px 0 -10px round 0px 0px 28px 28px)",
