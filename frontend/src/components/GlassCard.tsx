@@ -34,9 +34,9 @@ export function CardHeader({ title, badge, badgeColor = "text-accent" }: {
 }) {
   return (
     <div className="flex justify-between items-center mb-4">
-      <span className="text-[10px] uppercase tracking-[1.2px] text-text-muted font-semibold">{title}</span>
+      <span className="glass-label">{title}</span>
       {badge && (
-        <span className={`text-[10px] px-2 py-0.5 rounded-md bg-white/5 ${badgeColor} font-semibold`}>
+        <span className={`glass-badge ${badgeColor}`}>
           {badge}
         </span>
       )}

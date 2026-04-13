@@ -41,11 +41,11 @@ export function KpiHeader({ eventCount, taskCount, habitStreak, habitsToday, wee
   const currentTime = useCurrentTime();
 
   return (
-    <div className="flex justify-between items-start mb-6">
+    <div className="flex justify-between items-start mb-6" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>
       <div>
-        <div className="text-[48px] font-extrabold tracking-tighter leading-none text-text-primary mb-1">{currentTime}</div>
-        <h1 className="text-[26px] font-bold tracking-tight">{getGreeting()}, Thilo</h1>
-        <p className="text-text-muted text-[13px] mt-1.5">{formatDate()}</p>
+        <div className="text-[56px] font-extrabold tracking-tighter leading-none text-white mb-1">{currentTime}</div>
+        <h1 className="text-[28px] font-bold tracking-tight text-white">{getGreeting()}, Thilo</h1>
+        <p className="text-white/50 text-[13px] mt-1.5 font-medium">{formatDate()}</p>
         <div className="flex gap-2 mt-3">
           <StatusPill label={`${eventCount} Termine`} active />
           <StatusPill label={`${taskCount} Tasks`} active />
@@ -54,16 +54,16 @@ export function KpiHeader({ eventCount, taskCount, habitStreak, habitsToday, wee
       </div>
       <div className="flex gap-7 items-end">
         <div className="text-right">
-          <div className="text-[38px] font-extrabold tracking-tighter leading-none text-accent-light">{habitStreak}</div>
-          <div className="text-[10px] text-text-muted uppercase tracking-widest mt-1">Tage Streak</div>
+          <div className="text-[42px] font-extrabold tracking-tighter leading-none text-accent-light">{habitStreak}</div>
+          <div className="text-[10px] text-white/50 uppercase tracking-widest mt-1 font-semibold">Tage Streak</div>
         </div>
         <div className="text-right">
-          <div className="text-[38px] font-extrabold tracking-tighter leading-none text-success">{habitsToday}</div>
-          <div className="text-[10px] text-text-muted uppercase tracking-widest mt-1">Habits heute</div>
+          <div className="text-[42px] font-extrabold tracking-tighter leading-none text-success">{habitsToday}</div>
+          <div className="text-[10px] text-white/50 uppercase tracking-widest mt-1 font-semibold">Habits heute</div>
         </div>
         <div className="text-right">
-          <div className="text-[38px] font-extrabold tracking-tighter leading-none text-warning">{weekCompletion}%</div>
-          <div className="text-[10px] text-text-muted uppercase tracking-widest mt-1">Woche</div>
+          <div className="text-[42px] font-extrabold tracking-tighter leading-none text-warning">{weekCompletion}%</div>
+          <div className="text-[10px] text-white/50 uppercase tracking-widest mt-1 font-semibold">Woche</div>
         </div>
       </div>
     </div>

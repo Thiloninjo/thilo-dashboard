@@ -114,8 +114,8 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
         initial={{ opacity: 1, height: "auto" }}
         exit={{ opacity: 0, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0, overflow: "hidden" }}
         transition={{ duration: 0.4, ease: "easeInOut" }}
-        className={`flex items-center gap-2.5 py-2.5 px-3 rounded-lg hover:bg-surface-hover transition-colors cursor-pointer ${
-          overdue ? "bg-danger/5" : ""
+        className={`flex items-center gap-2.5 py-2.5 px-3 rounded-xl hover:bg-white/8 transition-colors cursor-pointer ${
+          overdue ? "bg-danger/10" : ""
         }`}
       >
         <Checkbox
@@ -123,16 +123,16 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
           onChange={() => checkOff(task)}
         />
         <div className="flex-1 min-w-0">
-          <span className={`text-xs block ${overdue ? "text-danger" : ""}`}>
+          <span className={`text-sm font-semibold block ${overdue ? "text-danger" : "text-white"}`}>
             {task.source === "vault" ? (task as any).description : (task as any).content}
           </span>
           {dueLabel && (
-            <span className={`text-[10px] mt-0.5 block ${overdue ? "text-danger/80" : "text-text-muted"}`}>
+            <span className={`text-xs mt-0.5 block font-medium ${overdue ? "text-danger/70" : "text-white/40"}`}>
               {dueLabel}
             </span>
           )}
         </div>
-        <span className="text-[9px] px-1.5 py-0.5 rounded bg-surface-raised text-text-muted flex-shrink-0">
+        <span className="text-[10px] px-2 py-0.5 rounded-lg bg-white/8 text-white/40 font-semibold flex-shrink-0">
           {task.source === "vault" ? "Vault" : "Todoist"}
         </span>
       </motion.div>
@@ -157,7 +157,7 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
             <span className="text-base text-text-muted">/</span>
             <span className="text-lg font-semibold text-text-muted">{total}</span>
           </div>
-          <span className="text-[10px] text-text-muted">erledigt</span>
+          <span className="text-xs text-white/40 font-medium">erledigt</span>
         </div>
         <div className="mt-3">
           <ProgressBar progress={progress} />
@@ -179,8 +179,8 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
               >
                 ▶
               </motion.span>
-              <span className="text-xs font-semibold text-danger">Überfällig</span>
-              <span className="text-[10px] text-danger/70 ml-auto">{overdueTasks.length} Tasks</span>
+              <span className="text-sm font-bold text-danger">Überfällig</span>
+              <span className="text-xs text-danger/70 font-semibold ml-auto">{overdueTasks.length} Tasks</span>
             </button>
             <AnimatePresence>
               {overdueOpen && (

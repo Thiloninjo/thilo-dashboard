@@ -25,19 +25,19 @@ export function HabitsCard({ habits, onRefresh }: Props) {
           <div
             key={habit.id}
             className={`flex items-center gap-2.5 p-2.5 rounded-xl transition-colors ${
-              habit.isAntiHabit ? "hover:bg-danger/5" : "hover:bg-surface-hover"
+              habit.isAntiHabit ? "hover:bg-danger/8" : "hover:bg-white/8"
             }`}
           >
             <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center text-[13px] flex-shrink-0 ${
-                habit.isAntiHabit ? "bg-danger/12" : habit.completed ? "bg-success/12" : "bg-accent/12"
+              className={`w-9 h-9 rounded-xl flex items-center justify-center text-[14px] flex-shrink-0 ${
+                habit.isAntiHabit ? "bg-danger/15" : habit.completed ? "bg-success/15" : "bg-white/10"
               }`}
             >
               {habit.isAntiHabit ? "🚫" : habit.completed ? "✓" : "💪"}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-medium">{habit.text}</div>
-              <div className={`text-[10px] mt-0.5 ${habit.isAntiHabit ? "text-danger" : habit.streak > 0 ? "text-success" : "text-text-muted"}`}>
+              <div className="text-sm font-semibold text-white">{habit.text}</div>
+              <div className={`text-xs mt-0.5 font-medium ${habit.isAntiHabit ? "text-danger" : habit.streak > 0 ? "text-success" : "text-white/40"}`}>
                 {habit.isAntiHabit
                   ? `Anti-Habit · ${habit.completed ? "Geschafft" : "Noch offen"}`
                   : habit.streak > 0
