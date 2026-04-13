@@ -12,14 +12,12 @@ import { PersonalDev } from "./pages/PersonalDev";
 function LiquidGlassFilter() {
   return (
     <svg style={{ display: "none" }}>
-      {/* Convex glass magnify effect — slight zoom/bulge in center */}
-      <filter id="displacementFilter">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="0.5" result="blurred" />
-        <feComponentTransfer in="blurred" result="brightened">
-          <feFuncR type="linear" slope="1.02" />
-          <feFuncG type="linear" slope="1.02" />
-          <feFuncB type="linear" slope="1.02" />
-        </feComponentTransfer>
+      {/* Magnify/refraction effect — smooth radial distortion, not wavy */}
+      <filter id="glassRefraction" x="-10%" y="-10%" width="120%" height="120%">
+        {/* Create a smooth gradient displacement map (radial) */}
+        <feFlood floodColor="#808080" result="neutral" />
+        <feTurbulence type="fractalNoise" baseFrequency="0.003" numOctaves="1" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="12" xChannelSelector="R" yChannelSelector="G" />
       </filter>
     </svg>
   );
