@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { KpiHeader } from "./heute/KpiHeader";
 import { ProfileCard } from "./heute/ProfileCard";
 import { HabitsCard } from "./heute/HabitsCard";
@@ -9,12 +9,26 @@ import { apiFetch } from "../lib/api";
 import { onWSMessage } from "../lib/ws";
 import type { CalendarEvent, Task, HabitItem, WeeklyGoals, CachedResponse } from "../lib/types";
 
+// Only update state if data actually changed — prevents flicker/re-render on identical polling responses
+function useStableState<T>(initial: T): [T, (newVal: T) => void] {
+  const [state, setState] = useState<T>(initial);
+  const jsonRef = useRef(JSON.stringify(initial));
+  const setStable = useCallback((newVal: T) => {
+    const json = JSON.stringify(newVal);
+    if (json !== jsonRef.current) {
+      jsonRef.current = json;
+      setState(newVal);
+    }
+  }, []);
+  return [state, setStable];
+}
+
 export function Heute() {
-  const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [vaultTasks, setVaultTasks] = useState<Task[]>([]);
-  const [todoistTasks, setTodoistTasks] = useState<Task[]>([]);
-  const [rawHabits, setRawHabits] = useState<HabitItem[]>([]);
-  const [goals, setGoals] = useState<WeeklyGoals>({ weekNumber: 0, year: 0, dateRange: "", team: [], personal: [] });
+  const [events, setEvents] = useStableState<CalendarEvent[]>([]);
+  const [vaultTasks, setVaultTasks] = useStableState<Task[]>([]);
+  const [todoistTasks, setTodoistTasks] = useStableState<Task[]>([]);
+  const [rawHabits, setRawHabits] = useStableState<HabitItem[]>([]);
+  const [goals, setGoals] = useStableState<WeeklyGoals>({ weekNumber: 0, year: 0, dateRange: "", team: [], personal: [] });
 
   // Scored habits — persists across re-renders, never reset by server data
   const [scoredIds, setScoredIds] = useState<Set<string>>(new Set());

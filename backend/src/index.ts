@@ -12,7 +12,8 @@ import { sopsRouter } from "./routes/sops.js";
 import { inboxRouter } from "./routes/inbox.js";
 import { startFileWatcher } from "./services/file-watcher.js";
 import { startPolling } from "./services/poller.js";
-import { startHandyNoteWatcher } from "./services/handy-note-watcher.js";
+// Handy-Note-Watcher disabled locally — runs on server only
+// import { startHandyNoteWatcher } from "./services/handy-note-watcher.js";
 
 const app = express();
 app.use(cors());
@@ -33,7 +34,7 @@ app.use("/api/inbox", inboxRouter);
 const server = createServer(app);
 startFileWatcher(server);
 startPolling();
-startHandyNoteWatcher();
+// startHandyNoteWatcher(); // Disabled — server handles this
 
 server.listen(CONFIG.port, () => {
   console.log(`Dashboard backend running on http://localhost:${CONFIG.port}`);
