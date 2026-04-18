@@ -87,7 +87,7 @@ const KEYWORD_RULES: KeywordRule[] = [
     type: "complete",
     patterns: [
       /\b(erledigt|fertig|done|abgehakt|gecheckt)[:\s]/i,
-      /\bhab .{2,30} (gemacht|genommen|erledigt|geschafft)/i,
+      /\bhab(?:e|') .{2,40} (gemacht|genommen|erledigt|geschafft)/i,
     ],
   },
   {
@@ -391,39 +391,25 @@ async function createCalendarEvent(summary: string, date: string, time?: string)
 }
 
 async function completeTask(searchText: string): Promise<{ success: boolean; task?: string; source?: string }> {
-  const searchLower = searchText.toLowerCase();
-
-  // 1. Try Habitica first (habits + dailies)
+  // 1. Try own Habits app first (habits.json + habit-log.json)
   try {
-    const habRes = await fetch("https://habitica.com/api/v3/tasks/user?type=dailys", {
-      headers: {
-        "x-api-user": CONFIG.habitica.userId,
-        "x-api-key": CONFIG.habitica.apiToken,
-        "x-client": "thilo-dashboard",
-      },
-    });
-    if (habRes.ok) {
-      const habJson = await habRes.json();
-      const dailies = habJson.data || [];
-      const habitMatch = dailies.find((d: any) =>
-        d.isDue && !d.completed && (
-          fuzzyMatch(d.text, searchText) ||
-          fuzzyMatch(searchText, d.text)
-        )
-      );
-      if (habitMatch) {
-        const scoreRes = await fetch(`https://habitica.com/api/v3/tasks/${habitMatch.id}/score/up`, {
-          method: "POST",
-          headers: {
-            "x-api-user": CONFIG.habitica.userId,
-            "x-api-key": CONFIG.habitica.apiToken,
-            "x-client": "thilo-dashboard",
-          },
-        });
-        if (scoreRes.ok) return { success: true, task: habitMatch.text, source: "habitica" };
-      }
+    const { getAllHabitsWithStatus, scoreHabit } = await import("./habits.js");
+    const habits = await getAllHabitsWithStatus();
+    const habitMatch = habits.find((h) =>
+      h.isDue && !h.completed && (
+        fuzzyMatch(h.text, searchText) ||
+        fuzzyMatch(searchText, h.text) ||
+        fuzzyMatch(h.id, searchText) ||
+        fuzzyMatch(searchText, h.id)
+      )
+    );
+    if (habitMatch) {
+      await scoreHabit(habitMatch.id, "up");
+      return { success: true, task: habitMatch.text, source: "habits" };
     }
-  } catch {}
+  } catch (err) {
+    console.error("[Inbox] Habits score failed:", err);
+  }
 
   // 2. Try Todoist
   try {
@@ -706,7 +692,7 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
       console.log("[Inbox] Calendar broadcast triggered");
     } catch {}
   }
-  if (successTypes.has("task") || successTypes.has("complete") || successTypes.has("delete")) {
+  if (successTypes.has("task") || successTypes.has("delete")) {
     try {
       const { getTodayTasks } = await import("./todoist.js");
       const { cacheSet } = await import("../cache.js");
@@ -715,6 +701,13 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
       cacheSet("todoist", tasks);
       broadcastApiUpdate("todoist");
       console.log("[Inbox] Todoist broadcast triggered");
+    } catch {}
+  }
+  if (successTypes.has("complete")) {
+    try {
+      const { broadcastApiUpdate } = await import("./file-watcher.js");
+      broadcastApiUpdate("habitica"); // "habitica" is the cache key the frontend listens to for habits
+      console.log("[Inbox] Habits broadcast triggered");
     } catch {}
   }
 
