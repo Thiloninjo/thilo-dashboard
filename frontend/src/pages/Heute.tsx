@@ -33,6 +33,7 @@ export function Heute() {
   const [rawHabits, setRawHabits] = useStableState<HabitItem[]>([]);
   const [goals, setGoals] = useStableState<WeeklyGoals>({ weekNumber: 0, year: 0, dateRange: "", team: [], personal: [] });
 
+  const loadedRef = useRef(false);
   const [loaded, setLoaded] = useState(false);
   const [boardOpen, setBoardOpen] = useState(false);
   const [drehTasks, setDrehTasks] = useState<Task[]>([]);
@@ -56,8 +57,8 @@ export function Heute() {
     if (asana) setAsanaTasks(asana.data);
     if (hab) setRawHabits(hab.data);
     if (wg) setGoals(wg.data);
-    if (!loaded) setLoaded(true);
-  }, [loaded]);
+    if (!loadedRef.current) { loadedRef.current = true; setLoaded(true); }
+  }, []);
 
   // Fetch only the source that changed — avoids full reload on every poller tick
   const fetchSource = useCallback(async (source: string) => {
