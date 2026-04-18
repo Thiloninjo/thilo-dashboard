@@ -188,12 +188,35 @@ function detectKeywordIntent(text: string): Intent[] | null {
   return null; // No keyword match → fall through to AI
 }
 
-// === PHASE 2: AI fallback (conservative, default = note) ===
+// === PHASE 2: AI with strict trigger whitelist (no freestyle interpretation) ===
+
+// These are the ONLY words that allow the AI to assign a non-note intent.
+// If none of these appear in the text, the AI MUST return "note".
+const TRIGGER_WHITELIST = {
+  task: ["neue aufgabe", "neuer task", "neues todo", "neues to do", "neue to-do", "nicht vergessen", "denk dran", "erinner mich", "muss noch", "muss ich noch"],
+  calendar: ["neuer termin", "termin um", "kalendereintrag", "trag in den kalender"],
+  complete: ["erledigt", "fertig", "done", "abgehakt", "gecheckt", "gemacht", "genommen", "geschafft"],
+  delete: ["lösch", "loesch", "streich", "cancel", "absagen", "canceln", "fällt aus", "faellt aus", "gecancelt", "abgesagt"],
+  shift: ["verschoben", "verlegt", "verschiebt", "geändert auf", "geaendert auf", "statt"],
+  sop: ["sop", "s.o.p", "es o pe", "trag in die sop", "pack in die sop"],
+};
 
 async function detectIntentsAI(text: string): Promise<Intent[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return [{ type: "note", title: text, source: "ai" }];
+  }
+
+  // Pre-check: does the text contain ANY trigger word at all?
+  const lower = text.toLowerCase();
+  const hasTrigger = Object.values(TRIGGER_WHITELIST).some(triggers =>
+    triggers.some(t => lower.includes(t))
+  );
+
+  // No trigger word found → skip AI entirely, save the API call
+  if (!hasTrigger) {
+    console.log("[Inbox] No trigger word found → note (AI skipped)");
+    return [{ type: "note", title: text, source: "keyword" }];
   }
 
   const anthropic = new Anthropic({ apiKey });
@@ -202,38 +225,54 @@ async function detectIntentsAI(text: string): Promise<Intent[]> {
 
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
-    max_tokens: 300,
+    max_tokens: 400,
     messages: [{
       role: "user",
-      content: `Du bist ein KONSERVATIVER Intent-Parser. Spracheingabe via Wispr Flow.
+      content: `Du bist ein Intent-Parser fuer Spracheingaben. Du darfst Intents NUR vergeben wenn ein TRIGGER-WORT vorkommt.
 
-Datum: ${today} (${new Date().toLocaleDateString("de-DE", { weekday: "long" })}), Uhrzeit: ${now}
+Datum: ${today} (${new Date().toLocaleDateString("de-DE", { weekday: "long" })})
+Wochentage: ${(() => { const d = new Date(); const days = []; for (let i = 0; i < 7; i++) { const dd = new Date(d); dd.setDate(d.getDate() + i); days.push(dd.toLocaleDateString("de-DE", { weekday: "long" }) + " = " + dd.getFullYear() + "-" + String(dd.getMonth()+1).padStart(2,"0") + "-" + String(dd.getDate()).padStart(2,"0")); } return days.join(", "); })()}
+Uhrzeit: ${now}
 
 Eingabe: "${text}"
 
-INTENT-TYPEN: task, calendar, complete, delete, sop_hint, note
+## TRIGGER-WHITELIST (NUR diese Woerter erlauben einen Intent!)
 
-WICHTIGSTE REGEL: Im Zweifel IMMER "note". Lieber eine Notiz zu viel als ein falscher Termin/Task.
+task: "neue aufgabe", "neuer task", "neues todo", "nicht vergessen", "denk dran", "erinner mich", "muss noch", "muss ich noch"
+calendar: "neuer termin", "termin um", "kalendereintrag", "trag in den kalender"
+complete: "erledigt", "fertig", "done", "abgehakt", "gemacht", "genommen", "geschafft"
+delete: "lösch", "streich", "cancel", "absagen", "fällt aus", "gecancelt", "abgesagt"
+sop_hint: "sop", "s.o.p."
 
-NUR diese Faelle sind NICHT "note":
-- "task": Wenn die Person KLAR eine Aufgabe formuliert ("ich muss", "nicht vergessen", "mach mal")
-- "calendar": Wenn die Person EXPLIZIT einen Termin will UND eine Uhrzeit nennt
-- "complete": Wenn die Person sagt dass sie etwas GETAN hat ("hab gemacht", "ist done", "war beim")
-- "delete": Wenn die Person etwas LOESCHEN will ("cancel", "fällt aus", "streich")
-- "sop_hint": Wenn es ein konkretes Learning/Best Practice aus einem Dreh/Edit ist
+## VERSCHIEBE-LOGIK (Trigger: "verschoben", "verlegt", "statt", "geändert auf")
 
-ACHTUNG — das sind KEINE Intents, sondern Notizen:
-- Erzaehlungen ("War heute um 14 Uhr beim Zahnarzt" OHNE "erledigt" = note, nicht calendar!)
-- Ideen ("Waere cool wenn", "vielleicht koennte man" = note)
-- Reflexionen ("Ich habe gemerkt dass..." = note)
-- Zeitangaben in Erzaehlungen sind KEINE Termine
+Wenn ein Verschiebe-Trigger vorkommt → ZWEI Intents:
+1. delete (den alten Eintrag)
+2. calendar (den neuen Eintrag mit neuer Zeit/Datum)
 
-Antworte NUR mit JSON:
-{"type":"...","title":"kurzer Titel","confidence":0.0-1.0,"date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"bei complete/delete","sopWorkspace":"bei sop_hint","sopFile":"bei sop_hint"}
+Beispiel: "Zahnarzt hat sich auf 16 Uhr verschoben" → [delete Zahnarzt, calendar Zahnarzt 16:00]
 
-"confidence" ist PFLICHT: Wie sicher bist du, dass es NICHT einfach eine Notiz ist? 0.0 = sicher Notiz, 1.0 = sicher anderer Intent.
+## ABSOLUTE REGEL
 
-NUR JSON, kein anderer Text.`
+Kein Trigger-Wort aus der Whitelist gefunden → IMMER "note". KEINE Ausnahme.
+"War heute um 14 beim Zahnarzt" → note (kein Trigger!)
+"Hatte ne gute Idee" → note (kein Trigger!)
+"Morgen um 10 Tennis" → note (kein Trigger! "morgen um 10" ist KEIN Trigger)
+
+## OUTPUT
+
+JSON-Array. NUR JSON, kein anderer Text.
+[{"type":"...","title":"kurzer sauberer Titel","date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"bei complete/delete"}]
+
+- "title": Kurz, sauber, ohne Fuellwoerter
+- "date": Wenn kein Datum → heute (${today})
+- "time": Nur wenn Uhrzeit genannt
+- "searchTerm": Bei complete/delete — der Name zum Suchen
+- Bei sop_hint: zusaetzlich "sopWorkspace" und "sopFile"
+
+SOP-Zuordnung:
+Workspace "Tennis-Ring-Lual": "Dreh Learnings.md", "Longform SOP.md", "Tippvideo SOP.md", "Trainingsvideo SOP.md", "Studio-Video SOP.md", "Quality Control SOP.md"
+Workspace "Cavy": "Filming SOP.md", "Vlog Editing SOP.md"`
     }],
   });
 
@@ -255,28 +294,17 @@ NUR JSON, kein anderer Text.`
 
     if (items.length === 0) return [{ type: "note", title: text, source: "ai" }];
 
-    // Apply confidence threshold: < 0.8 → force to note
-    const CONFIDENCE_THRESHOLD = 0.8;
-
-    return items.map((json: any) => {
-      const confidence = typeof json.confidence === "number" ? json.confidence : 0;
-      const type = confidence >= CONFIDENCE_THRESHOLD ? (json.type || "note") : "note";
-
-      if (type !== json.type) {
-        console.log(`[Inbox AI] Low confidence (${confidence}) for "${json.type}" → forced to "note"`);
-      }
-
-      return {
-        type,
-        title: json.title || text,
-        time: json.time || undefined,
-        date: json.date || TODAY(),
-        searchTerm: json.searchTerm || json.title || text,
-        sopWorkspace: json.sopWorkspace || undefined,
-        sopFile: json.sopFile || undefined,
-        source: "ai" as const,
-      };
-    });
+    console.log("[Inbox AI] Parsed:", items.length, "intents");
+    return items.map((json: any) => ({
+      type: json.type || "note",
+      title: json.title || text,
+      time: json.time || undefined,
+      date: json.date || TODAY(),
+      searchTerm: json.searchTerm || json.title || text,
+      sopWorkspace: json.sopWorkspace || undefined,
+      sopFile: json.sopFile || undefined,
+      source: "ai" as const,
+    }));
   } catch (err) {
     console.error("[Inbox AI] Parse error:", err);
     return [{ type: "note", title: text, source: "ai" }];
