@@ -2,6 +2,11 @@ import { CONFIG } from "../config.js";
 import { google } from "googleapis";
 import { readFile } from "fs/promises";
 import Anthropic from "@anthropic-ai/sdk";
+import { getAllHabitsWithStatus, scoreHabit } from "./habits.js";
+import { getTodayEvents } from "./google-calendar.js";
+import { getTodayTasks } from "./todoist.js";
+import { cacheSet } from "../cache.js";
+import { broadcastApiUpdate } from "./file-watcher.js";
 
 // Simple dedup: ignore identical messages within 60 seconds
 const recentMessages = new Map<string, number>(); // text → timestamp
@@ -393,7 +398,6 @@ async function createCalendarEvent(summary: string, date: string, time?: string)
 async function completeTask(searchText: string): Promise<{ success: boolean; task?: string; source?: string }> {
   // 1. Try own Habits app first (habits.json + habit-log.json)
   try {
-    const { getAllHabitsWithStatus, scoreHabit } = await import("./habits.js");
     const habits = await getAllHabitsWithStatus();
     const habitMatch = habits.find((h) =>
       h.isDue && !h.completed && (
@@ -683,9 +687,6 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
   if (successTypes.has("calendar") || successTypes.has("delete")) {
     // Re-fetch calendar and broadcast so dashboard updates within seconds
     try {
-      const { getTodayEvents } = await import("./google-calendar.js");
-      const { cacheSet } = await import("../cache.js");
-      const { broadcastApiUpdate } = await import("./file-watcher.js");
       const events = await getTodayEvents();
       cacheSet("calendar", events);
       broadcastApiUpdate("calendar");
@@ -694,9 +695,6 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
   }
   if (successTypes.has("task") || successTypes.has("delete")) {
     try {
-      const { getTodayTasks } = await import("./todoist.js");
-      const { cacheSet } = await import("../cache.js");
-      const { broadcastApiUpdate } = await import("./file-watcher.js");
       const tasks = await getTodayTasks();
       cacheSet("todoist", tasks);
       broadcastApiUpdate("todoist");
@@ -705,7 +703,6 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
   }
   if (successTypes.has("complete")) {
     try {
-      const { broadcastApiUpdate } = await import("./file-watcher.js");
       broadcastApiUpdate("habitica"); // "habitica" is the cache key the frontend listens to for habits
       console.log("[Inbox] Habits broadcast triggered");
     } catch {}
