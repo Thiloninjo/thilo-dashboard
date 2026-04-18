@@ -3,7 +3,25 @@ import { google } from "googleapis";
 import { readFile } from "fs/promises";
 import Anthropic from "@anthropic-ai/sdk";
 
-// === Intent Detection via Claude Haiku ===
+// Simple dedup: ignore identical messages within 60 seconds
+const recentMessages = new Map<string, number>(); // text → timestamp
+const DEDUP_WINDOW_MS = 60_000;
+
+function isDuplicate(text: string): boolean {
+  const key = text.trim().toLowerCase();
+  const now = Date.now();
+
+  // Clean old entries
+  for (const [k, ts] of recentMessages) {
+    if (now - ts > DEDUP_WINDOW_MS) recentMessages.delete(k);
+  }
+
+  if (recentMessages.has(key)) return true;
+  recentMessages.set(key, now);
+  return false;
+}
+
+// === Intent Detection: Keywords first, AI fallback ===
 
 interface Intent {
   type: "task" | "calendar" | "complete" | "delete" | "sop" | "sop_hint" | "note";
@@ -13,132 +31,269 @@ interface Intent {
   searchTerm?: string; // for complete/delete: what to search for
   sopWorkspace?: string; // for sop: "Tennis-Ring-Lual" or "Cavy"
   sopFile?: string; // for sop: "Longform SOP.md"
+  source?: "keyword" | "ai"; // how the intent was detected
 }
 
-// Normalize text for fuzzy matching — ignore hyphens, spaces, case
+// Normalize text for matching — ignore hyphens, spaces, case
 function normalize(text: string): string {
   return text.toLowerCase().replace(/[-–—_]/g, " ").replace(/\s+/g, " ").trim();
 }
 
-function fuzzyMatch(a: string, b: string): boolean {
-  const na = normalize(a);
-  const nb = normalize(b);
-  return na.includes(nb) || nb.includes(na);
+// Word-boundary-aware matching: checks if search words appear as whole words in text
+function fuzzyMatch(text: string, search: string): boolean {
+  const normText = normalize(text);
+  const normSearch = normalize(search);
+
+  // Exact match
+  if (normText === normSearch) return true;
+
+  // Check if all search words appear as word boundaries in text
+  const searchWords = normSearch.split(" ").filter(w => w.length > 1);
+  if (searchWords.length === 0) return false;
+
+  return searchWords.every(word => {
+    const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+    return regex.test(normText);
+  });
 }
 
-const TODAY = () => new Date().toISOString().slice(0, 10);
+const TODAY = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`; };
 const NOW_TIME = () => new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
-async function detectIntents(text: string): Promise<Intent[]> {
+// === PHASE 1: Keyword-based detection (100% reliable, no AI) ===
+
+interface KeywordRule {
+  type: Intent["type"];
+  patterns: RegExp[];
+}
+
+const KEYWORD_RULES: KeywordRule[] = [
+  {
+    type: "task",
+    patterns: [
+      /^(neue aufgabe|task|todo|to do|to-do|aufgabe|reminder)[:\s]/i,
+      /^(nicht vergessen|denk dran|erinner mich)[:\s]/i,
+      /^(setz auf die liste|pack auf die liste)[:\s]/i,
+    ],
+  },
+  {
+    type: "calendar",
+    patterns: [
+      /^(neuer termin|termin|kalendereintrag|kalender eintrag)[:\s]/i,
+      /^(trag in den kalender|mach.{0,10}kalendereintrag)/i,
+    ],
+  },
+  {
+    type: "complete",
+    patterns: [
+      /^(erledigt|fertig|done|abgehakt|gecheckt)[:\s]/i,
+      /^hab .{2,30} (gemacht|genommen|erledigt|geschafft)/i,
+      /^(kreatin|planks|gym|stretching|cold shower|kalt geduscht|meditation|journal)/i,
+    ],
+  },
+  {
+    type: "delete",
+    patterns: [
+      /^(lösch|loesch|lösche|entfern|cancel|streich|nimm raus)[:\s]/i,
+      /^(absagen|canceln|stornieren)[:\s]/i,
+    ],
+  },
+  {
+    type: "sop",
+    patterns: [
+      /^(sop|s\.o\.p\.?|es o pe|sop eintrag|sop.update|in die checkliste)[:\s]/i,
+      /^(trag in die sop|pack in die sop|merk dir f[uü]r die sop)/i,
+    ],
+  },
+];
+
+// Extract time from text: "um 14 Uhr" → "14:00", "um 9:30" → "09:30"
+function extractTime(text: string): string | undefined {
+  // "um 14 Uhr 30" / "um 14:30" / "um 14 Uhr"
+  const m1 = text.match(/um (\d{1,2})[\s:]?(?:uhr\s*)?(\d{2})?\s*(?:uhr)?/i);
+  if (m1) {
+    const h = parseInt(m1[1]);
+    const min = m1[2] ? parseInt(m1[2]) : 0;
+    return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+  }
+  // "14:30" standalone
+  const m2 = text.match(/\b(\d{1,2}):(\d{2})\b/);
+  if (m2) return `${String(parseInt(m2[1])).padStart(2, "0")}:${m2[2]}`;
+  return undefined;
+}
+
+// Extract date from text: "morgen", "übermorgen", weekday names
+function extractDate(text: string): string {
+  const lower = text.toLowerCase();
+  const today = new Date();
+
+  if (lower.includes("übermorgen") || lower.includes("uebermorgen")) {
+    const d = new Date(today); d.setDate(d.getDate() + 2);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
+  if (lower.includes("morgen")) {
+    const d = new Date(today); d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  }
+
+  const weekdays = ["sonntag", "montag", "dienstag", "mittwoch", "donnerstag", "freitag", "samstag"];
+  for (let i = 0; i < weekdays.length; i++) {
+    if (lower.includes(weekdays[i])) {
+      const todayDay = today.getDay();
+      let diff = i - todayDay;
+      if (diff <= 0) diff += 7; // next week
+      const d = new Date(today); d.setDate(d.getDate() + diff);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    }
+  }
+
+  return TODAY();
+}
+
+// Strip the keyword prefix from text to get clean title
+function stripPrefix(text: string): string {
+  return text
+    .replace(/^(neue aufgabe|neuer termin|task|todo|to do|to-do|aufgabe|reminder|termin|kalendereintrag|erledigt|fertig|done|abgehakt|gecheckt|lösch|loesch|lösche|entfern|cancel|streich|nimm raus|absagen|canceln|stornieren|sop|s\.o\.p\.?|es o pe|sop eintrag|sop.update|in die checkliste|trag in die sop|pack in die sop|nicht vergessen|denk dran|erinner mich|setz auf die liste|pack auf die liste|trag in den kalender|hab )[:\s]*/i, "")
+    .replace(/\s*(um \d{1,2}[\s:]?\d{0,2}\s*(?:uhr)?|morgen|übermorgen|uebermorgen|heute)\s*/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function detectKeywordIntent(text: string): Intent[] | null {
+  const lower = text.toLowerCase().trim();
+
+  for (const rule of KEYWORD_RULES) {
+    for (const pattern of rule.patterns) {
+      if (pattern.test(lower)) {
+        const title = stripPrefix(text) || text;
+        const intent: Intent = {
+          type: rule.type,
+          title,
+          date: extractDate(text),
+          source: "keyword",
+        };
+
+        if (rule.type === "calendar" || rule.type === "task") {
+          intent.time = extractTime(text);
+        }
+        if (rule.type === "complete" || rule.type === "delete") {
+          intent.searchTerm = title;
+        }
+
+        console.log(`[Inbox Keyword] Matched: ${rule.type} → "${title}"`);
+        return [intent];
+      }
+    }
+  }
+
+  return null; // No keyword match → fall through to AI
+}
+
+// === PHASE 2: AI fallback (conservative, default = note) ===
+
+async function detectIntentsAI(text: string): Promise<Intent[]> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
-    return [{ type: "note", title: text }];
+    return [{ type: "note", title: text, source: "ai" }];
   }
 
   const anthropic = new Anthropic({ apiKey });
-
   const today = TODAY();
   const now = NOW_TIME();
 
   const response = await anthropic.messages.create({
-    model: "claude-haiku-4-5-20251001",
-    max_tokens: 500,
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 300,
     messages: [{
       role: "user",
-      content: `Du bist ein Intent-Parser. Analysiere diese Spracheingabe und gib ein JSON-ARRAY zurück.
+      content: `Du bist ein KONSERVATIVER Intent-Parser. Spracheingabe via Wispr Flow.
 
-Die Eingabe kann MEHRERE Aktionen enthalten! "Ich muss Blumen gießen und um 18 Uhr ins Gym" = 2 Intents.
-
-Heutiges Datum: ${today}
-Aktuelle Uhrzeit: ${now}
+Datum: ${today} (${new Date().toLocaleDateString("de-DE", { weekday: "long" })}), Uhrzeit: ${now}
 
 Eingabe: "${text}"
 
-Mögliche Intents:
-- "task": Etwas das erledigt werden muss (To-Do, Aufgabe, "ich muss noch...")
-- "calendar": Ein Termin mit Zeit/Datum (Meeting, Arzt, Fitnessstudio, Event)
-- "complete": Etwas wurde erledigt/abgehakt ("hab X gemacht", "X erledigt", "X fertig", "X genommen")
-- "delete": Etwas soll gelöscht/entfernt werden ("lösch X", "nimm X raus", "X absagen")
-- "sop": EXPLIZIT angewiesen, etwas in eine SOP einzutragen ("füg in die SOP hinzu", "trag in die SOP ein", "SOP Eintrag:", "das muss in die SOP")
-- "sop_hint": Haiku erkennt, dass etwas SOP-relevant SEIN KÖNNTE, aber es wurde NICHT explizit gesagt — wird nur als Claude-Notiz vermerkt, nicht in die Queue
-- "note": Alles andere (Idee, Erkenntnis, Reflexion, unklar)
+INTENT-TYPEN: task, calendar, complete, delete, sop_hint, note
 
-SOP-ERKENNUNG — verfuegbare SOPs:
-Workspace "Tennis-Ring-Lual":
-  - "Dreh Learnings.md" = Tennis Filming SOP (alles rund ums Tennis-Filmen, Kamera, Dreh)
-  - "Longform SOP.md" = Longform SOP (lange Tennis-Videos, Edits)
-  - "Tippvideo SOP.md" = Tippvideo SOP (kurze Tennis-Tipp-Videos)
-  - "Trainingsvideo SOP.md" = Trainingsvideo SOP (Trainings-Clips)
-  - "Studio-Video SOP.md" = Studio/Reaction Videos
-  - "Quality Control SOP.md" = Quality Control (Maiks QC-Prozess)
-Workspace "Cavy":
-  - "Filming SOP.md" = Vlog Filming SOP (Vlog-Drehs, Daily Vlogs)
-  - "Vlog Editing SOP.md" = Vlog Editing SOP (Vlog-Schnitt)
+WICHTIGSTE REGEL: Im Zweifel IMMER "note". Lieber eine Notiz zu viel als ein falscher Termin/Task.
 
-Bei "sop" und "sop_hint": Gib zusaetzlich "sopWorkspace" und "sopFile" an.
+NUR diese Faelle sind NICHT "note":
+- "task": Wenn die Person KLAR eine Aufgabe formuliert ("ich muss", "nicht vergessen", "mach mal")
+- "calendar": Wenn die Person EXPLIZIT einen Termin will UND eine Uhrzeit nennt
+- "complete": Wenn die Person sagt dass sie etwas GETAN hat ("hab gemacht", "ist done", "war beim")
+- "delete": Wenn die Person etwas LOESCHEN will ("cancel", "fällt aus", "streich")
+- "sop_hint": Wenn es ein konkretes Learning/Best Practice aus einem Dreh/Edit ist
 
-WICHTIG — Unterscheidung sop vs sop_hint:
-- "sop" NUR wenn der User EXPLIZIT sagt: "füg in die SOP ein", "trag in die SOP ein", "SOP Eintrag", "das muss in die SOP", "pack das in die SOP"
-- "sop_hint" wenn der User etwas sagt, das SOP-relevant SEIN KÖNNTE, aber er hat es NICHT explizit angewiesen. Z.B. "Beim Dreh heute hab ich gemerkt, Stativ ist wichtig" — könnte relevant sein, aber er hat nicht gesagt "füg das ein"
-- Im Zweifel: "sop_hint", NICHT "sop". Lieber zu vorsichtig als zu aggressiv.
+ACHTUNG — das sind KEINE Intents, sondern Notizen:
+- Erzaehlungen ("War heute um 14 Uhr beim Zahnarzt" OHNE "erledigt" = note, nicht calendar!)
+- Ideen ("Waere cool wenn", "vielleicht koennte man" = note)
+- Reflexionen ("Ich habe gemerkt dass..." = note)
+- Zeitangaben in Erzaehlungen sind KEINE Termine
 
-Beispiel explizit: "Füg in die Longform SOP ein: Stativ immer mitnehmen" →
-{"type":"sop","title":"Stativ immer mitnehmen","sopWorkspace":"Tennis-Ring-Lual","sopFile":"Longform SOP.md"}
+Antworte NUR mit JSON:
+{"type":"...","title":"kurzer Titel","confidence":0.0-1.0,"date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"bei complete/delete","sopWorkspace":"bei sop_hint","sopFile":"bei sop_hint"}
 
-Beispiel implizit: "Beim Dreh heute war das Stativ mega wichtig" →
-{"type":"sop_hint","title":"Stativ war beim Dreh wichtig","sopWorkspace":"Tennis-Ring-Lual","sopFile":"Dreh Learnings.md"}
+"confidence" ist PFLICHT: Wie sicher bist du, dass es NICHT einfach eine Notiz ist? 0.0 = sicher Notiz, 1.0 = sicher anderer Intent.
 
-WICHTIG — Verschieben/Ändern:
-Wenn jemand sagt "Termin X hat sich auf Y verschoben" oder "verschieb X auf Y", dann sind das ZWEI Intents:
-1. {"type":"delete","searchTerm":"X"} — den alten Termin löschen
-2. {"type":"calendar","title":"X","time":"neue Zeit","date":"neues Datum"} — neuen Termin erstellen
-Beispiel: "Team-Meeting hat sich auf 16 Uhr verschoben" →
-[{"type":"delete","title":"Team-Meeting","searchTerm":"Team-Meeting"},{"type":"calendar","title":"Team-Meeting","date":"2026-04-13","time":"16:00"}]
-
-Antworte NUR mit einem JSON-Array:
-[{"type":"...","title":"kurzer sauberer Titel","date":"YYYY-MM-DD","time":"HH:MM","searchTerm":"Suchbegriff fuer complete/delete","sopWorkspace":"nur bei sop","sopFile":"nur bei sop"}]
-
-Regeln:
-- IMMER ein Array zurückgeben, auch bei nur einem Intent: [{"type":"task",...}]
-- "title": Kurz und sauber, ohne Füllwörter. "Ich muss heute noch Blumen gießen" → "Blumen gießen"
-- "date": Wenn kein Datum genannt, nimm heute (${today}). "morgen" = nächster Tag. "Montag" = nächster Montag.
-- "time": Nur wenn eine Uhrzeit genannt wird. "um 18" = "18:00". Keine Zeit → weglassen.
-- "searchTerm": Bei complete/delete: der Name der Task/des Termins zum Suchen. "Hab Planks gemacht" → "Plank"
-- Wenn jemand sagt "ich muss X" oder "X nicht vergessen" → "task", nicht "note"
-- "Fitnessstudio um 18" → "calendar" mit time "18:00"
-- Mehrere Aktionen in einer Eingabe → mehrere Objekte im Array
-
-NUR JSON-Array, kein anderer Text.`
+NUR JSON, kein anderer Text.`
     }],
   });
 
   try {
     const content = response.content[0];
-    if (content.type !== "text") return [{ type: "note", title: text }];
+    if (content.type !== "text") return [{ type: "note", title: text, source: "ai" }];
 
     console.log("[Inbox AI] Raw:", content.text);
     let jsonStr = content.text.trim();
-    // Extract JSON array from response
+
+    // Handle both single object and array responses
     const arrMatch = jsonStr.match(/\[[\s\S]*\]/);
+    const objMatch = jsonStr.match(/\{[\s\S]*\}/);
     if (arrMatch) jsonStr = arrMatch[0];
+    else if (objMatch) jsonStr = `[${objMatch[0]}]`;
 
     const arr = JSON.parse(jsonStr);
-    if (!Array.isArray(arr) || arr.length === 0) return [{ type: "note", title: text }];
+    const items = Array.isArray(arr) ? arr : [arr];
 
-    console.log("[Inbox AI] Parsed:", arr.length, "intents");
-    return arr.map((json: any) => ({
-      type: json.type || "note",
-      title: json.title || text,
-      time: json.time || undefined,
-      date: json.date || TODAY(),
-      searchTerm: json.searchTerm || json.title || text,
-      sopWorkspace: json.sopWorkspace || undefined,
-      sopFile: json.sopFile || undefined,
-    }));
+    if (items.length === 0) return [{ type: "note", title: text, source: "ai" }];
+
+    // Apply confidence threshold: < 0.8 → force to note
+    const CONFIDENCE_THRESHOLD = 0.8;
+
+    return items.map((json: any) => {
+      const confidence = typeof json.confidence === "number" ? json.confidence : 0;
+      const type = confidence >= CONFIDENCE_THRESHOLD ? (json.type || "note") : "note";
+
+      if (type !== json.type) {
+        console.log(`[Inbox AI] Low confidence (${confidence}) for "${json.type}" → forced to "note"`);
+      }
+
+      return {
+        type,
+        title: json.title || text,
+        time: json.time || undefined,
+        date: json.date || TODAY(),
+        searchTerm: json.searchTerm || json.title || text,
+        sopWorkspace: json.sopWorkspace || undefined,
+        sopFile: json.sopFile || undefined,
+        source: "ai" as const,
+      };
+    });
   } catch (err) {
     console.error("[Inbox AI] Parse error:", err);
-    return [{ type: "note", title: text }];
+    return [{ type: "note", title: text, source: "ai" }];
   }
+}
+
+// === Combined: Keywords first, then AI ===
+
+async function detectIntents(text: string): Promise<Intent[]> {
+  // Phase 1: Try keyword match (instant, 100% reliable)
+  const keywordResult = detectKeywordIntent(text);
+  if (keywordResult) return keywordResult;
+
+  // Phase 2: AI fallback (conservative, confidence-gated)
+  console.log("[Inbox] No keyword match, using AI fallback");
+  return detectIntentsAI(text);
 }
 
 // === Actions ===
@@ -182,8 +337,12 @@ async function createCalendarEvent(summary: string, date: string, time?: string)
 
     if (time) {
       const startDT = `${date}T${time}:00`;
-      const endHour = parseInt(time.split(":")[0]) + 1;
-      const endDT = `${date}T${String(endHour).padStart(2, "0")}:${time.split(":")[1]}:00`;
+      const [h, m] = time.split(":").map(Number);
+      const endDate = new Date(2000, 0, 1, h + 1, m);
+      const endTime = `${String(endDate.getHours()).padStart(2, "0")}:${String(endDate.getMinutes()).padStart(2, "0")}`;
+      const endDT = endDate.getDate() > 1
+        ? `${date}T23:59:00`
+        : `${date}T${endTime}:00`;
       start = { dateTime: startDT, timeZone: "Europe/Berlin" };
       end = { dateTime: endDT, timeZone: "Europe/Berlin" };
     } else {
@@ -263,7 +422,7 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
   return { success: false };
 }
 
-async function deleteItem(searchText: string): Promise<{ success: boolean; item?: string; source?: string; count?: number }> {
+async function deleteItem(searchText: string, date?: string): Promise<{ success: boolean; item?: string; source?: string; count?: number }> {
   const searchLower = searchText.toLowerCase();
   let deletedCount = 0;
   let deletedNames: string[] = [];
@@ -276,9 +435,10 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
     oauth2Client.setCredentials(tokens);
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000); // Only today
+    // Search today + tomorrow to catch near-future events
+    const targetDate = date ? new Date(date + "T00:00:00") : new Date();
+    const startOfDay = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+    const endOfDay = new Date(startOfDay.getTime() + 2 * 24 * 60 * 60 * 1000);
 
     const events = await calendar.events.list({
       calendarId: "primary",
@@ -305,7 +465,8 @@ async function deleteItem(searchText: string): Promise<{ success: boolean; item?
 
   // 2. Try Todoist — delete ALL matches
   try {
-    const res = await fetch("https://todoist.com/api/v1/tasks/filter?query=today%20%7C%20overdue", {
+    const filterDate = date || new Date().toISOString().slice(0, 10);
+    const res = await fetch(`https://todoist.com/api/v1/tasks/filter?query=${encodeURIComponent(`due: ${filterDate} | overdue`)}`, {
       headers: { Authorization: `Bearer ${CONFIG.todoist.apiToken}` },
     });
     if (res.ok) {
@@ -349,7 +510,7 @@ async function addToSOP(title: string, workspace: string, sopFile: string, hintO
   const { simpleGit } = await import("simple-git");
 
   const vaultPath = CONFIG.vaultPath;
-  const filePath = join(vaultPath, "4- Workspaces", workspace, "01_SOPs", sopFile);
+  const filePath = join(vaultPath, "1 - Workspaces", workspace, "01_SOPs", sopFile);
 
   try {
     let content = await rf(filePath, "utf-8");
@@ -430,7 +591,7 @@ async function executeIntent(intent: Intent): Promise<{ success: boolean; messag
       };
     }
     case "delete": {
-      const result = await deleteItem(intent.searchTerm || intent.title);
+      const result = await deleteItem(intent.searchTerm || intent.title, intent.date);
       return {
         success: result.success,
         message: result.success
@@ -463,12 +624,38 @@ async function executeIntent(intent: Intent): Promise<{ success: boolean; messag
       };
     }
     case "note":
-    default:
-      return { success: true, message: `Notiz: "${intent.title}"` };
+    default: {
+      // Save note to Vault inbox for later processing via /handy-notes
+      const { join } = await import("path");
+      const { writeFile: wf } = await import("fs/promises");
+
+      const vaultPath = CONFIG.vaultPath;
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }).replace(/\./g, ".");
+      const timeStr = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }).replace(":", "-");
+      const fileName = `Handy Note from ${dateStr}, ${timeStr}.md`;
+      const filePath = join(vaultPath, "2 - Meine Notizen", "Handy Note Dump", fileName);
+
+      try {
+        await wf(filePath, `${intent.title}\n`, "utf-8");
+        return { success: true, message: `Notiz gespeichert: "${intent.title}"` };
+      } catch {
+        return { success: true, message: `Notiz: "${intent.title}" (nicht gespeichert)` };
+      }
+    }
   }
 }
 
 export async function processInboxMessage(text: string): Promise<InboxResult> {
+  if (isDuplicate(text)) {
+    return {
+      intents: [],
+      results: [],
+      success: true,
+      message: "Duplikat ignoriert (gleiche Nachricht innerhalb 60s)",
+    };
+  }
+
   const intents = await detectIntents(text);
 
   const results = [];
