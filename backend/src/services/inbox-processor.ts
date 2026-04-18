@@ -692,6 +692,32 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
     results.push({ intent, ...result });
   }
 
+  // Broadcast updates immediately instead of waiting for Google/Todoist webhooks
+  const successTypes = new Set(results.filter(r => r.success).map(r => r.intent.type));
+  if (successTypes.has("calendar") || successTypes.has("delete")) {
+    // Re-fetch calendar and broadcast so dashboard updates within seconds
+    try {
+      const { getTodayEvents } = await import("./google-calendar.js");
+      const { cacheSet } = await import("../cache.js");
+      const { broadcastApiUpdate } = await import("./file-watcher.js");
+      const events = await getTodayEvents();
+      cacheSet("calendar", events);
+      broadcastApiUpdate("calendar");
+      console.log("[Inbox] Calendar broadcast triggered");
+    } catch {}
+  }
+  if (successTypes.has("task") || successTypes.has("complete") || successTypes.has("delete")) {
+    try {
+      const { getTodayTasks } = await import("./todoist.js");
+      const { cacheSet } = await import("../cache.js");
+      const { broadcastApiUpdate } = await import("./file-watcher.js");
+      const tasks = await getTodayTasks();
+      cacheSet("todoist", tasks);
+      broadcastApiUpdate("todoist");
+      console.log("[Inbox] Todoist broadcast triggered");
+    } catch {}
+  }
+
   const allSuccess = results.every((r) => r.success);
   const messages = results.map((r) => r.message);
 
