@@ -52,7 +52,7 @@ startPolling().catch((err) => console.error("[Poller] Startup error:", err));
 
 // Register Google Calendar webhook (server only — needs public HTTPS URL)
 if (process.env.DASHBOARD_SERVER) {
-  import("./services/google-calendar.js").then((m) => m.startCalendarWatch());
+  import("./services/google-calendar.js").then((m) => m.startCalendarWatch()).catch((err) => console.error("[Calendar Watch] Failed:", err));
 }
 // startHandyNoteWatcher(); // Disabled — server handles this
 
