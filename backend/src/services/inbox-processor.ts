@@ -400,6 +400,8 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
   // 1. Try own Habits app first (habits.json + habit-log.json)
   try {
     const habits = await getAllHabitsWithStatus();
+    console.log(`[Inbox] Habits loaded: ${habits.length} habits, searching for "${searchText}"`);
+    console.log(`[Inbox] Habits: ${habits.map(h => `${h.id}="${h.text}" isDue=${h.isDue} completed=${h.completed}`).join(", ")}`);
     const habitMatch = habits.find((h) =>
       h.isDue && !h.completed && (
         fuzzyMatch(h.text, searchText) ||
@@ -409,9 +411,11 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
       )
     );
     if (habitMatch) {
+      console.log(`[Inbox] Habit match: "${habitMatch.text}" (${habitMatch.id})`);
       await scoreHabit(habitMatch.id, "up");
       return { success: true, task: habitMatch.text, source: "habits" };
     }
+    console.log(`[Inbox] No habit match found for "${searchText}"`);
   } catch (err) {
     console.error("[Inbox] Habits score failed:", err);
   }
