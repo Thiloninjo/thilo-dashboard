@@ -402,7 +402,8 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
     const habits = await getAllHabitsWithStatus();
     console.log(`[Inbox] Habits loaded: ${habits.length} habits, searching for "${searchText}"`);
     console.log(`[Inbox] Habits: ${habits.map(h => `${h.id}="${h.text}" isDue=${h.isDue} completed=${h.completed}`).join(", ")}`);
-    const habitMatch = habits.find((h) =>
+    // First try uncompleted habits
+    let habitMatch = habits.find((h) =>
       h.isDue && !h.completed && (
         fuzzyMatch(h.text, searchText) ||
         fuzzyMatch(searchText, h.text) ||
@@ -410,9 +411,20 @@ async function completeTask(searchText: string): Promise<{ success: boolean; tas
         fuzzyMatch(searchText, h.id)
       )
     );
+    // Also match already-completed habits (idempotent — user says "done" twice, that's fine)
+    if (!habitMatch) {
+      habitMatch = habits.find((h) =>
+        fuzzyMatch(h.text, searchText) ||
+        fuzzyMatch(searchText, h.text) ||
+        fuzzyMatch(h.id, searchText) ||
+        fuzzyMatch(searchText, h.id)
+      );
+    }
     if (habitMatch) {
-      console.log(`[Inbox] Habit match: "${habitMatch.text}" (${habitMatch.id})`);
-      await scoreHabit(habitMatch.id, "up");
+      console.log(`[Inbox] Habit match: "${habitMatch.text}" (${habitMatch.id}) completed=${habitMatch.completed}`);
+      if (!habitMatch.completed) {
+        await scoreHabit(habitMatch.id, "up");
+      }
       return { success: true, task: habitMatch.text, source: "habits" };
     }
     console.log(`[Inbox] No habit match found for "${searchText}"`);
