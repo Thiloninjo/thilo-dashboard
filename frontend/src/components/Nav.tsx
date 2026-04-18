@@ -122,7 +122,6 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
   }
 
   return (
-    <nav className="sticky top-4 z-10 flex justify-center px-7 pt-4">
       <div
         ref={containerRef}
         className="relative flex gap-0 p-1.5 rounded-full touch-none"
@@ -174,6 +173,5 @@ export function Nav({ activeIndex, onSelect, onDragProgress }: Props) {
           </button>
         ))}
       </div>
-    </nav>
   );
 }

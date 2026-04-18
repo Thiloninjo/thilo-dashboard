@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Background Gallery – Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'SF Pro Display', -apple-system, 'Segoe UI', system-ui, sans-serif;
+    background: #0a0a0f;
+    color: #fff;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1 {
+    text-align: center;
+    padding: 40px 20px 10px;
+    font-size: 28px;
+    font-weight: 600;
+  }
+  .subtitle {
+    text-align: center;
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    margin-bottom: 40px;
+  }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.4);
+    padding: 0 40px;
+    margin: 40px 0 20px;
+  }
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 24px;
+    padding: 0 40px 60px;
+  }
+  .card {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    aspect-ratio: 16/10;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.3s, transform 0.2s;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.3); }
+  .card.selected { border-color: #007AFF; box-shadow: 0 0 20px rgba(0,122,255,0.3); }
+  .card-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 20px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    z-index: 10;
+  }
+  .card-label h3 { font-size: 16px; font-weight: 600; }
+  .card-label p { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+  .card-label .tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.15);
+    margin-top: 6px;
+  }
+
+  /* ====== BACKGROUND PREVIEWS ====== */
+
+  /* 1. Solid Light */
+  .bg-light { background: #f5f5f7; }
+  .bg-light .card-label h3, .bg-light .card-label p { color: #1d1d1f; }
+  .bg-light .card-label { background: linear-gradient(transparent, rgba(255,255,255,0.9)); }
+
+  /* 2. Solid Dark */
+  .bg-dark { background: #0a0a0f; }
+
+  /* 3. Midnight Blue */
+  .bg-midnight { background: linear-gradient(135deg, #0c1445 0%, #1a0a2e 50%, #0d0d1a 100%); }
+
+  /* 4. Warm Gradient */
+  .bg-warm { background: linear-gradient(135deg, #1a0a0a 0%, #2d1a0a 50%, #1a1005 100%); }
+
+  /* 5. Subtle Mesh – soft gradient blobs */
+  .bg-mesh {
+    background: #0a0a0f;
+    position: relative;
+  }
+  .bg-mesh::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 30%, rgba(0,122,255,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 80% at 80% 70%, rgba(138,43,226,0.1) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0,200,150,0.05) 0%, transparent 70%);
+  }
+
+  /* 6. Aurora */
+  .bg-aurora {
+    background: #050510;
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-aurora::before {
+    content: '';
+    position: absolute;
+    inset: -50%;
+    background: conic-gradient(from 180deg at 50% 50%,
+      rgba(0,255,180,0.08) 0deg,
+      rgba(0,122,255,0.12) 60deg,
+      rgba(138,43,226,0.1) 120deg,
+      rgba(255,0,128,0.06) 180deg,
+      rgba(0,200,255,0.08) 240deg,
+      rgba(0,255,100,0.06) 300deg,
+      rgba(0,255,180,0.08) 360deg);
+    animation: aurora-rotate 30s linear infinite;
+    filter: blur(60px);
+  }
+  @keyframes aurora-rotate { to { transform: rotate(360deg); } }
+
+  /* 7. Particle Field (CSS-only dots) */
+  .bg-particles {
+    background: #0a0a0f;
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-particles::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.4) 50%, transparent 50%),
+      radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.3) 50%, transparent 50%),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,255,0.5) 50%, transparent 50%),
+      radial-gradient(1px 1px at 70% 80%, rgba(255,255,255,0.25) 50%, transparent 50%),
+      radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.35) 50%, transparent 50%),
+      radial-gradient(1.5px 1.5px at 15% 85%, rgba(0,122,255,0.4) 50%, transparent 50%),
+      radial-gradient(1.5px 1.5px at 85% 15%, rgba(138,43,226,0.3) 50%, transparent 50%),
+      radial-gradient(1px 1px at 45% 45%, rgba(255,255,255,0.3) 50%, transparent 50%),
+      radial-gradient(1px 1px at 25% 75%, rgba(255,255,255,0.2) 50%, transparent 50%),
+      radial-gradient(1px 1px at 65% 35%, rgba(255,255,255,0.35) 50%, transparent 50%),
+      radial-gradient(1px 1px at 80% 55%, rgba(255,255,255,0.2) 50%, transparent 50%),
+      radial-gradient(1px 1px at 5% 50%, rgba(255,255,255,0.3) 50%, transparent 50%);
+    animation: particle-drift 20s linear infinite alternate;
+  }
+  @keyframes particle-drift {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(10px, -10px); }
+  }
+
+  /* 8. 3D Reactive Grid (preview – static) */
+  .bg-grid {
+    background: #0a0a0f;
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-grid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    perspective: 600px;
+    transform: perspective(600px) rotateX(45deg) scale(2);
+    transform-origin: center 120%;
+    mask-image: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 80%);
+    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 80%);
+  }
+  .bg-grid::after {
+    content: '';
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,122,255,0.2) 0%, transparent 70%);
+    bottom: 30%;
+    left: 50%;
+    transform: translateX(-50%);
+    filter: blur(20px);
+  }
+
+  /* 9. Flowing Waves */
+  .bg-waves {
+    background: #0a0a0f;
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-waves::before {
+    content: '';
+    position: absolute;
+    bottom: -20%;
+    left: -10%;
+    right: -10%;
+    height: 80%;
+    background:
+      radial-gradient(ellipse 100% 40% at 30% 100%, rgba(0,122,255,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 100% 40% at 70% 90%, rgba(138,43,226,0.06) 0%, transparent 70%);
+    animation: wave-flow 8s ease-in-out infinite alternate;
+  }
+  @keyframes wave-flow {
+    0% { transform: translateY(0) scaleY(1); }
+    100% { transform: translateY(-20px) scaleY(1.1); }
+  }
+
+  /* 10. Topography Lines */
+  .bg-topo {
+    background: #0a0a0f;
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-topo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.15;
+    background-image: url("data:image/svg+xml,%3Csvg width='400' height='400' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 200 Q100 150 200 200 T400 200' fill='none' stroke='white' stroke-width='0.5'/%3E%3Cpath d='M0 220 Q100 170 200 220 T400 220' fill='none' stroke='white' stroke-width='0.5'/%3E%3Cpath d='M0 240 Q100 190 200 240 T400 240' fill='none' stroke='white' stroke-width='0.5'/%3E%3Cpath d='M0 180 Q100 130 200 180 T400 180' fill='none' stroke='white' stroke-width='0.5'/%3E%3Cpath d='M0 160 Q100 110 200 160 T400 160' fill='none' stroke='white' stroke-width='0.5'/%3E%3Cpath d='M0 260 Q100 210 200 260 T400 260' fill='none' stroke='white' stroke-width='0.5'/%3E%3Cpath d='M0 140 Q100 90 200 140 T400 140' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E");
+    background-size: 400px 400px;
+  }
+
+  /* 11. Glassmorphism Blobs */
+  .bg-blobs {
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a0a2e 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .bg-blobs .blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    animation: blob-float 12s ease-in-out infinite alternate;
+  }
+  .bg-blobs .blob-1 {
+    width: 200px; height: 200px;
+    background: rgba(0,122,255,0.15);
+    top: 10%; left: 15%;
+  }
+  .bg-blobs .blob-2 {
+    width: 250px; height: 250px;
+    background: rgba(138,43,226,0.12);
+    bottom: 10%; right: 15%;
+    animation-delay: -4s;
+  }
+  .bg-blobs .blob-3 {
+    width: 150px; height: 150px;
+    background: rgba(0,200,150,0.1);
+    top: 50%; left: 50%;
+    animation-delay: -8s;
+  }
+  @keyframes blob-float {
+    0% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(20px, -20px) scale(1.1); }
+    66% { transform: translate(-10px, 10px) scale(0.95); }
+    100% { transform: translate(15px, -5px) scale(1.05); }
+  }
+
+  /* 12. Apple Light (SF style) */
+  .bg-apple-light {
+    background: linear-gradient(180deg, #f5f5f7 0%, #e8e8ed 100%);
+  }
+  .bg-apple-light .card-label h3, .bg-apple-light .card-label p { color: #1d1d1f; }
+  .bg-apple-light .card-label { background: linear-gradient(transparent, rgba(245,245,247,0.95)); }
+
+  /* 13. 3D Sphere (CSS) */
+  .bg-sphere {
+    background: #0a0a0f;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .sphere {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%,
+      rgba(0,122,255,0.3) 0%,
+      rgba(138,43,226,0.15) 40%,
+      rgba(0,0,0,0.3) 70%,
+      transparent 100%);
+    box-shadow:
+      0 0 60px rgba(0,122,255,0.15),
+      inset 0 0 30px rgba(0,122,255,0.1);
+    animation: sphere-pulse 6s ease-in-out infinite;
+  }
+  @keyframes sphere-pulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 60px rgba(0,122,255,0.15); }
+    50% { transform: scale(1.05); box-shadow: 0 0 80px rgba(0,122,255,0.25); }
+  }
+
+  /* 14. Noise Texture */
+  .bg-noise {
+    background: #111116;
+    position: relative;
+  }
+  .bg-noise::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0.03;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 256px 256px;
+  }
+
+  /* 15. Time-of-Day (current) */
+  .bg-timeofday {
+    background: linear-gradient(135deg, #1a1040 0%, #0d2040 50%, #0a1020 100%);
+    position: relative;
+  }
+  .bg-timeofday::before {
+    content: '🕐';
+    position: absolute;
+    font-size: 48px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.3;
+  }
+
+  /* Glass card preview overlay */
+  .glass-preview {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60%;
+    padding: 16px 20px;
+    border-radius: 16px;
+    backdrop-filter: blur(12px) brightness(1.1) saturate(1.3);
+    -webkit-backdrop-filter: blur(12px) brightness(1.1) saturate(1.3);
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: inset 0 0 6px 1px rgba(255,255,255,0.15), 0 8px 32px rgba(0,0,0,0.3);
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    z-index: 5;
+  }
+  .glass-preview.light-mode {
+    background: rgba(255,255,255,0.5);
+    border: 1px solid rgba(255,255,255,0.6);
+    color: rgba(0,0,0,0.7);
+    text-shadow: none;
+  }
+  .glass-preview strong { display: block; margin-bottom: 4px; font-size: 14px; }
+</style>
+</head>
+<body>
+
+<h1>Dashboard Background Gallery</h1>
+<p class="subtitle">Klick auf einen Hintergrund der dir gefällt – sag mir dann im Terminal welche</p>
+
+<!-- STATIC BACKGROUNDS -->
+<div class="section-title">☀️ Light Mode</div>
+<div class="gallery">
+  <div class="card bg-light" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview light-mode"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Clean White</h3><p>Minimalistisch, Apple-Style</p><span class="tag">LIGHT</span></div>
+  </div>
+  <div class="card bg-apple-light" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview light-mode"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Apple SF Light</h3><p>Sanfter Gradient, warm-neutral</p><span class="tag">LIGHT</span></div>
+  </div>
+</div>
+
+<!-- DARK MODE -->
+<div class="section-title">🌙 Dark Mode</div>
+<div class="gallery">
+  <div class="card bg-dark" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Pure Dark</h3><p>OLED-schwarz, maximaler Kontrast</p><span class="tag">DARK</span></div>
+  </div>
+  <div class="card bg-midnight" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Midnight Blue</h3><p>Tiefdunkles Blau-Violett</p><span class="tag">DARK</span></div>
+  </div>
+  <div class="card bg-warm" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Warm Dark</h3><p>Dunkle warme Töne, gemütlich</p><span class="tag">DARK</span></div>
+  </div>
+  <div class="card bg-noise" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Textured Dark</h3><p>Feines Rauschen, subtile Tiefe</p><span class="tag">DARK</span></div>
+  </div>
+</div>
+
+<!-- AMBIENT / ANIMATED -->
+<div class="section-title">✨ Ambient & Animated</div>
+<div class="gallery">
+  <div class="card bg-mesh" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Subtle Mesh</h3><p>Sanfte Farbverläufe, ruhig</p><span class="tag">AMBIENT</span></div>
+  </div>
+  <div class="card bg-aurora" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Aurora</h3><p>Nordlicht-Effekt, langsam rotierend</p><span class="tag">ANIMATED</span></div>
+  </div>
+  <div class="card bg-waves" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Flowing Waves</h3><p>Fließende Wellen am unteren Rand</p><span class="tag">ANIMATED</span></div>
+  </div>
+  <div class="card bg-blobs" onclick="this.classList.toggle('selected')">
+    <div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div>
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Glass Blobs</h3><p>Schwebende Farbkugeln, organisch</p><span class="tag">ANIMATED</span></div>
+  </div>
+  <div class="card bg-particles" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Particle Field</h3><p>Schwebende Partikel, Weltraum-Feeling</p><span class="tag">ANIMATED</span></div>
+  </div>
+  <div class="card bg-topo" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Topography</h3><p>Dezente Höhenlinien, technisch</p><span class="tag">AMBIENT</span></div>
+  </div>
+</div>
+
+<!-- REACTIVE 3D -->
+<div class="section-title">🎮 Reaktive 3D-Hintergründe (Maus-Interaktion)</div>
+<div class="gallery">
+  <div class="card bg-grid" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>3D Grid</h3><p>Perspektivisches Gitter, reagiert auf Maus</p><span class="tag">3D REACTIVE</span></div>
+  </div>
+  <div class="card bg-sphere" onclick="this.classList.toggle('selected')">
+    <div class="sphere"></div>
+    <div class="card-label"><h3>Floating Sphere</h3><p>3D-Kugel folgt dem Cursor</p><span class="tag">3D REACTIVE</span></div>
+  </div>
+  <div class="card bg-dark" onclick="this.classList.toggle('selected')" style="position:relative">
+    <canvas id="wave-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>3D Wave Mesh</h3><p>Wellenförmiges 3D-Netz, Maus beeinflusst Wellen</p><span class="tag">3D REACTIVE</span></div>
+  </div>
+  <div class="card bg-dark" onclick="this.classList.toggle('selected')" style="position:relative">
+    <canvas id="point-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Point Cloud</h3><p>Partikelwolke mit Maus-Gravitation</p><span class="tag">3D REACTIVE</span></div>
+  </div>
+</div>
+
+<!-- SPECIAL -->
+<div class="section-title">🕐 Spezial</div>
+<div class="gallery">
+  <div class="card bg-timeofday" onclick="this.classList.toggle('selected')">
+    <div class="glass-preview"><strong>Glass Card</strong>Task preview content</div>
+    <div class="card-label"><h3>Time-of-Day (aktuell)</h3><p>Hintergrund ändert sich über den Tag – dein jetziger</p><span class="tag">DYNAMIC</span></div>
+  </div>
+</div>
+
+<script>
+// Mini 3D Wave Mesh preview
+(function() {
+  const c = document.getElementById('wave-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let w, h;
+  function resize() { w = c.width = c.offsetWidth; h = c.height = c.offsetHeight; }
+  resize();
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(0,122,255,0.15)';
+    ctx.lineWidth = 0.5;
+    for (let y = 0; y < 12; y++) {
+      ctx.beginPath();
+      for (let x = 0; x <= 20; x++) {
+        const px = (x / 20) * w;
+        const py = h * 0.4 + y * 12 + Math.sin(x * 0.5 + t + y * 0.3) * 8;
+        x === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    t += 0.02;
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Mini Point Cloud preview
+(function() {
+  const c = document.getElementById('point-canvas');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  let w, h;
+  function resize() { w = c.width = c.offsetWidth; h = c.height = c.offsetHeight; }
+  resize();
+  const pts = Array.from({length: 60}, () => ({
+    x: Math.random(), y: Math.random(),
+    vx: (Math.random() - 0.5) * 0.001,
+    vy: (Math.random() - 0.5) * 0.001,
+    r: Math.random() * 1.5 + 0.5
+  }));
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > 1) p.vx *= -1;
+      if (p.y < 0 || p.y > 1) p.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(p.x * w, p.y * h, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${100 + p.x * 155}, ${100 + p.y * 100}, 255, 0.4)`;
+      ctx.fill();
+    });
+    // Connect nearby points
+    ctx.strokeStyle = 'rgba(100,150,255,0.06)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const dx = (pts[i].x - pts[j].x) * w;
+        const dy = (pts[i].y - pts[j].y) * h;
+        if (dx*dx + dy*dy < 5000) {
+          ctx.beginPath();
+          ctx.moveTo(pts[i].x * w, pts[i].y * h);
+          ctx.lineTo(pts[j].x * w, pts[j].y * h);
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
+</body>
+</html>

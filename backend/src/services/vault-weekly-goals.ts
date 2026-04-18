@@ -45,7 +45,7 @@ export async function readCurrentWeekGoals(): Promise<WeeklyGoals> {
   const filePath = join(CONFIG.vaultPath, "4 - Projekte", "Dashboard", "weekly-goals", fileName);
 
   try {
-    const content = await readFile(filePath, "utf-8");
+    const content = (await readFile(filePath, "utf-8")).replace(/\r/g, "");
     return parseWeeklyGoals(content, weekNumber, year);
   } catch {
     return { weekNumber, year, dateRange: "", team: [], personal: [] };

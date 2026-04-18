@@ -52,13 +52,13 @@ export function toggleTask(content: string, lineNumber: number): string {
 
 export async function readTasks(): Promise<VaultTask[]> {
   const filePath = join(CONFIG.vaultPath, "--Aufgaben--.md");
-  const content = await readFile(filePath, "utf-8");
+  const content = (await readFile(filePath, "utf-8")).replace(/\r/g, "");
   return parseTasks(content);
 }
 
 export async function toggleVaultTask(lineNumber: number): Promise<VaultTask[]> {
   const filePath = join(CONFIG.vaultPath, "--Aufgaben--.md");
-  const content = await readFile(filePath, "utf-8");
+  const content = (await readFile(filePath, "utf-8")).replace(/\r/g, "");
   const updated = toggleTask(content, lineNumber);
 
   const tmpPath = join(dirname(filePath), `.aufgaben-tmp-${randomUUID()}.md`);

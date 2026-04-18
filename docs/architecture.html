@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Architektur — Thilo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --glass-bg: rgba(255,255,255,0.06);
+    --glass-border: rgba(255,255,255,0.15);
+    --glass-hover: rgba(255,255,255,0.12);
+    --text-primary: #fff;
+    --text-secondary: rgba(255,255,255,0.7);
+    --text-muted: rgba(255,255,255,0.4);
+    --accent: #007AFF;
+    --success: #30D158;
+    --warning: #FFD60A;
+    --danger: #FF453A;
+    --purple: #BF5AF2;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    background: #08080f;
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* === ANIMATED BACKGROUND === */
+  .bg-layer {
+    position: fixed; inset: 0; z-index: 0; overflow: hidden;
+  }
+  .bg-blob {
+    position: absolute; border-radius: 50%; filter: blur(120px); opacity: 0.4;
+    animation: blobFloat 20s ease-in-out infinite alternate;
+  }
+  .bg-blob.b1 { width: 600px; height: 600px; background: #1a0a3e; top: -10%; left: -5%; animation-delay: 0s; }
+  .bg-blob.b2 { width: 500px; height: 500px; background: #0a1a3e; bottom: -10%; right: -5%; animation-delay: -7s; }
+  .bg-blob.b3 { width: 400px; height: 400px; background: #0e2a1a; top: 40%; left: 50%; animation-delay: -14s; }
+
+  @keyframes blobFloat {
+    0% { transform: translate(0,0) scale(1); }
+    33% { transform: translate(30px,-40px) scale(1.1); }
+    66% { transform: translate(-20px,20px) scale(0.95); }
+    100% { transform: translate(15px,-10px) scale(1.05); }
+  }
+
+  /* === GLASS PANELS === */
+  .glass {
+    position: relative; overflow: hidden;
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    backdrop-filter: blur(20px) brightness(1.1) saturate(1.3);
+    -webkit-backdrop-filter: blur(20px) brightness(1.1) saturate(1.3);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.05);
+    transition: all 0.3s ease;
+  }
+  .glass::before {
+    content: ''; position: absolute; inset: 0; border-radius: 24px; pointer-events: none;
+    box-shadow: inset 4px 4px 0 -4px rgba(255,255,255,0.5), inset 0 0 6px 1px rgba(255,255,255,0.1);
+  }
+  .glass:hover { border-color: rgba(255,255,255,0.25); transform: translateY(-2px); }
+  .glass > * { position: relative; z-index: 1; }
+
+  .glass-sm {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    padding: 16px;
+    transition: all 0.3s ease;
+  }
+  .glass-sm:hover { background: rgba(255,255,255,0.08); }
+
+  /* === LAYOUT === */
+  .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+
+  h1 { font-size: 42px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 8px;
+       background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.6) 100%);
+       -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .subtitle { font-size: 16px; color: var(--text-muted); margin-bottom: 48px; font-weight: 400; }
+
+  h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+       color: var(--text-muted); margin-bottom: 20px; }
+
+  /* === TOGGLE === */
+  .toggle-bar {
+    display: flex; gap: 0; margin-bottom: 40px;
+    background: rgba(255,255,255,0.04); border-radius: 16px; padding: 4px;
+    border: 1px solid rgba(255,255,255,0.08); width: fit-content;
+  }
+  .toggle-btn {
+    padding: 12px 28px; border-radius: 12px; border: none; background: transparent;
+    color: var(--text-muted); font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; transition: all 0.3s ease; position: relative;
+  }
+  .toggle-btn.active {
+    background: rgba(255,255,255,0.1); color: var(--text-primary);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3), inset 0 0 0 1px rgba(255,255,255,0.1);
+  }
+  .toggle-btn .indicator {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 8px; vertical-align: middle;
+  }
+  .toggle-btn .indicator.on { background: var(--success); box-shadow: 0 0 8px rgba(48,209,88,0.5); }
+  .toggle-btn .indicator.off { background: var(--danger); box-shadow: 0 0 8px rgba(255,69,58,0.3); }
+  .toggle-btn .indicator.partial { background: var(--warning); box-shadow: 0 0 8px rgba(255,214,10,0.3); }
+
+  /* === ARCHITECTURE GRID === */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    gap: 24px;
+    margin-bottom: 48px;
+  }
+
+  .device-col { display: flex; flex-direction: column; gap: 20px; }
+
+  .device-card { padding: 24px; }
+  .device-card .device-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+  .device-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .device-card .device-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 16px; }
+
+  .service-list { display: flex; flex-direction: column; gap: 8px; }
+  .service-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border-radius: 12px; font-size: 13px; font-weight: 500;
+    transition: all 0.4s ease;
+  }
+  .service-item .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    transition: all 0.4s ease;
+  }
+  .service-item .dot.on { background: var(--success); box-shadow: 0 0 8px rgba(48,209,88,0.5); }
+  .service-item .dot.off { background: var(--danger); box-shadow: 0 0 6px rgba(255,69,58,0.3); }
+  .service-item .dot.stale { background: var(--warning); box-shadow: 0 0 6px rgba(255,214,10,0.3); }
+
+  .service-item.inactive { opacity: 0.35; }
+  .service-item.inactive .label { text-decoration: line-through; }
+
+  .service-item .label { flex: 1; }
+  .service-item .badge {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px;
+    background: rgba(255,255,255,0.08); color: var(--text-muted);
+  }
+
+  /* === CENTER COLUMN — SERVER === */
+  .server-card { padding: 28px; }
+  .server-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .server-card .ip { font-size: 12px; color: var(--accent); font-family: 'SF Mono', monospace; margin-bottom: 20px; }
+
+  .server-sections { display: flex; flex-direction: column; gap: 20px; }
+  .server-section h4 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--text-muted); margin-bottom: 10px;
+    padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* === CONNECTION LINES (animated) === */
+  .connections-layer {
+    position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  }
+  .conn-line {
+    stroke: rgba(255,255,255,0.15); stroke-width: 1.5;
+    stroke-dasharray: 6 4; animation: dashFlow 1.5s linear infinite;
+  }
+  .conn-line.active { stroke: rgba(48,209,88,0.4); stroke-width: 2; }
+  .conn-line.inactive { stroke: rgba(255,69,58,0.2); stroke-dasharray: 4 8; animation: none; }
+  @keyframes dashFlow { to { stroke-dashoffset: -20; } }
+
+  /* === DATA FLOW DIAGRAM === */
+  .flow-section { margin-bottom: 48px; }
+
+  .flow-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+  .flow-node {
+    padding: 10px 18px; border-radius: 14px; font-size: 13px; font-weight: 600;
+    border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+    white-space: nowrap; transition: all 0.4s ease;
+  }
+  .flow-node.source { border-color: rgba(0,122,255,0.3); background: rgba(0,122,255,0.08); }
+  .flow-node.process { border-color: rgba(191,90,242,0.3); background: rgba(191,90,242,0.08); }
+  .flow-node.output { border-color: rgba(48,209,88,0.3); background: rgba(48,209,88,0.08); }
+  .flow-node.inactive { opacity: 0.3; border-style: dashed; }
+  .flow-arrow { color: var(--text-muted); font-size: 18px; transition: opacity 0.4s; }
+  .flow-arrow.inactive { opacity: 0.2; }
+
+  /* === API TABLE === */
+  .api-table { width: 100%; border-collapse: collapse; }
+  .api-table th {
+    text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-muted); padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .api-table td {
+    padding: 12px 16px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+  }
+  .api-table tr { transition: background 0.2s; }
+  .api-table tr:hover { background: rgba(255,255,255,0.03); }
+  .api-table .route { font-family: 'SF Mono', 'Fira Code', monospace; color: var(--accent); font-weight: 500; }
+  .api-table .source-tag {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 6px; display: inline-block;
+  }
+  .api-table .source-tag.vault { background: rgba(191,90,242,0.15); color: #d4a0ff; }
+  .api-table .source-tag.api { background: rgba(0,122,255,0.15); color: #6ab4ff; }
+  .api-table .source-tag.file { background: rgba(48,209,88,0.15); color: #7dffaa; }
+  .api-table .source-tag.mixed { background: rgba(255,214,10,0.15); color: #fff0a0; }
+
+  /* === BOTTLENECK ALERTS === */
+  .bottleneck-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .bottleneck {
+    padding: 20px; cursor: default;
+  }
+  .bottleneck .severity {
+    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; padding: 3px 10px; border-radius: 8px; margin-bottom: 12px;
+  }
+  .bottleneck .severity.high { background: rgba(255,69,58,0.15); color: var(--danger); }
+  .bottleneck .severity.medium { background: rgba(255,214,10,0.15); color: var(--warning); }
+  .bottleneck .severity.low { background: rgba(0,122,255,0.15); color: var(--accent); }
+  .bottleneck h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .bottleneck p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+  /* === STATUS LEGEND === */
+  .legend {
+    display: flex; gap: 24px; margin-bottom: 32px; flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);
+  }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* === ANIMATIONS === */
+  .fade-in { animation: fadeIn 0.6s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  .stagger-1 { animation-delay: 0.1s; }
+  .stagger-2 { animation-delay: 0.2s; }
+  .stagger-3 { animation-delay: 0.3s; }
+  .stagger-4 { animation-delay: 0.4s; }
+  .stagger-5 { animation-delay: 0.5s; }
+  .stagger-6 { animation-delay: 0.6s; }
+
+  /* === PULSE for active services === */
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .pulse { animation: pulse 2s ease-in-out infinite; }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 1100px) {
+    .arch-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-layer">
+  <div class="bg-blob b1"></div>
+  <div class="bg-blob b2"></div>
+  <div class="bg-blob b3"></div>
+</div>
+
+<div class="container">
+  <!-- HEADER -->
+  <div class="fade-in">
+    <h1>Dashboard Architektur</h1>
+    <p class="subtitle">Komplette System-Übersicht — Geräte, Services, Datenflüsse</p>
+  </div>
+
+  <!-- SCENARIO TOGGLE -->
+  <div class="fade-in stagger-1">
+    <h2>Szenario</h2>
+    <div class="toggle-bar">
+      <button class="toggle-btn active" onclick="setScenario('on')" id="btn-on">
+        <span class="indicator on"></span>PC an
+      </button>
+      <button class="toggle-btn" onclick="setScenario('off')" id="btn-off">
+        <span class="indicator off"></span>PC aus
+      </button>
+      <button class="toggle-btn" onclick="setScenario('nobackend')" id="btn-nobackend">
+        <span class="indicator partial"></span>PC an, Backend crashed
+      </button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--success);box-shadow:0 0 6px rgba(48,209,88,0.5)"></div> Aktiv</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--warning);box-shadow:0 0 6px rgba(255,214,10,0.3)"></div> Eingeschränkt / Stale</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--danger);box-shadow:0 0 6px rgba(255,69,58,0.3)"></div> Inaktiv</div>
+    </div>
+  </div>
+
+  <!-- MAIN ARCHITECTURE -->
+  <div class="fade-in stagger-2">
+    <h2>Geräte & Services</h2>
+    <div class="arch-grid">
+
+      <!-- LEFT: PC -->
+      <div class="device-col">
+        <div class="glass device-card" id="pc-card">
+          <span class="device-icon">🖥️</span>
+          <h3>Thilos PC</h3>
+          <div class="device-sub">Windows 11 — Autostart via VBS</div>
+          <div class="service-list" id="pc-services">
+            <div class="service-item" data-pc="on">
+              <span class="dot on"></span>
+              <span class="label">Express Backend</span>
+              <span class="badge">:3001</span>
+            </div>
+            <div class="service-item" data-pc="on">
+              <span class="dot on"></span>
+              <span class="label">Vite Frontend</span>
+              <span class="badge">:5173</span>
+            </div>
+            <div class="service-item" data-pc="on">
+              <span class="dot on"></span>
+              <span class="label">File Watcher</span>
+              <span class="badge">Chokidar</span>
+            </div>
+            <div class="service-item" data-pc="on">
+              <span class="dot on"></span>
+              <span class="label">WebSocket Server</span>
+              <span class="badge">ws://</span>
+            </div>
+            <div class="service-item" data-pc="on">
+              <span class="dot on"></span>
+              <span class="label">Cloudflare Tunnel</span>
+              <span class="badge">HTTPS</span>
+            </div>
+            <div class="service-item" data-pc="on">
+              <span class="dot on"></span>
+              <span class="label">Chrome Kiosk</span>
+              <span class="badge">Dashboard</span>
+            </div>
+            <div class="service-item" data-pc="on" data-always="vault">
+              <span class="dot on"></span>
+              <span class="label">Obsidian Vault</span>
+              <span class="badge">Source of Truth</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTER: HETZNER -->
+      <div class="device-col">
+        <div class="glass server-card" id="server-card">
+          <span class="device-icon">☁️</span>
+          <h3>Hetzner VPS</h3>
+          <div class="ip">46-225-160-248.nip.io</div>
+
+          <div class="server-sections">
+            <div>
+              <h4>Always Running</h4>
+              <div class="service-list">
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Express Backend</span>
+                  <span class="badge">:3001</span>
+                </div>
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Habits PWA</span>
+                  <span class="badge">/habits/</span>
+                </div>
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Calendar Webhooks</span>
+                  <span class="badge">Push</span>
+                </div>
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Habits API</span>
+                  <span class="badge">JSON files</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4>Vault-Sync</h4>
+              <div class="service-list">
+                <div class="service-item" data-server="always" id="git-sync">
+                  <span class="dot on"></span>
+                  <span class="label">Git Pull (GitHub Webhook)</span>
+                  <span class="badge" id="sync-badge">~1-2s</span>
+                </div>
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Vault Tasks Parser</span>
+                  <span class="badge">Regex</span>
+                </div>
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Weekly Goals Parser</span>
+                  <span class="badge">Regex</span>
+                </div>
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">SOP Parser</span>
+                  <span class="badge">Regex</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4>Externe APIs</h4>
+              <div class="service-list">
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Google Calendar</span>
+                  <span class="badge">OAuth</span>
+                </div>
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Todoist</span>
+                  <span class="badge">Webhook</span>
+                </div>
+                <div class="service-item" data-server="always">
+                  <span class="dot on"></span>
+                  <span class="label">Asana</span>
+                  <span class="badge">On demand</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: HANDY -->
+      <div class="device-col">
+        <div class="glass device-card" id="phone-card">
+          <span class="device-icon">📱</span>
+          <h3>Thilos Handy</h3>
+          <div class="device-sub">PWA Shortcut + Wispr Flow</div>
+          <div class="service-list">
+            <div class="service-item" data-server="always">
+              <span class="dot on"></span>
+              <span class="label">Habits PWA</span>
+              <span class="badge">Installiert</span>
+            </div>
+            <div class="service-item" data-server="always">
+              <span class="dot on"></span>
+              <span class="label">Habits Tracking</span>
+              <span class="badge">Tägliche Ringe</span>
+            </div>
+            <div class="service-item" data-server="always">
+              <span class="dot on"></span>
+              <span class="label">Streak-Berechnung</span>
+              <span class="badge">Realtime</span>
+            </div>
+            <div class="service-item" data-phone="indirect">
+              <span class="dot on"></span>
+              <span class="label">Wispr Flow</span>
+              <span class="badge">Handy Notes</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="glass device-card" style="padding:20px">
+          <h3 style="font-size:15px;margin-bottom:12px">Datenfluss Handy → Vault</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="flow-node source" style="text-align:center;font-size:12px">Wispr Flow → Sprache → Text</div>
+            <div class="flow-arrow" style="text-align:center">↓</div>
+            <div class="flow-node process" style="text-align:center;font-size:12px">Handy Note Dump/</div>
+            <div class="flow-arrow" style="text-align:center">↓</div>
+            <div class="flow-node output" style="text-align:center;font-size:12px">/handy-notes verarbeitet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DATA FLOW DIAGRAMS -->
+  <div class="fade-in stagger-3">
+    <h2>Datenflüsse</h2>
+
+    <div class="glass" style="padding:28px;margin-bottom:24px" id="flow-local">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">🟢 Lokaler Datenfluss (PC an)</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Frontend → Lokales Backend → Vault (Dateisystem) + Externe APIs</p>
+      <div class="flow-row">
+        <div class="flow-node output">Chrome Kiosk :5173</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node process">Vite Proxy /api</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node process">Express :3001</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node source">Vault (Dateisystem)</div>
+      </div>
+      <div class="flow-row">
+        <div class="flow-node output">Chrome Kiosk :5173</div>
+        <div class="flow-arrow">←</div>
+        <div class="flow-node process" style="border-color:rgba(48,209,88,0.3)">WebSocket ws://</div>
+        <div class="flow-arrow">←</div>
+        <div class="flow-node source">File Watcher (Chokidar)</div>
+        <div style="font-size:12px;color:var(--text-muted);padding:6px 12px">Live Updates bei Vault-Änderungen</div>
+      </div>
+    </div>
+
+    <div class="glass" style="padding:28px;margin-bottom:24px" id="flow-fallback">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">🟡 Fallback-Datenfluss (PC an, Backend crashed)</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Frontend → Vite Proxy FAIL → Hetzner Fallback (30s hinter Vault)</p>
+      <div class="flow-row">
+        <div class="flow-node output">Chrome :5173</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node" style="border-color:rgba(255,69,58,0.3);background:rgba(255,69,58,0.08)">Vite Proxy ✗</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node process">Hetzner API</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node source" style="opacity:0.7">Vault (Git, ~30s old)</div>
+      </div>
+      <div style="font-size:12px;color:var(--warning);margin-top:8px;padding-left:4px">
+        ⚠️ Kein WebSocket — keine Live-Updates. Daten maximal 30s alt.
+      </div>
+    </div>
+
+    <div class="glass" style="padding:28px;margin-bottom:24px" id="flow-phone">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">📱 Handy-Datenfluss (immer aktiv)</h3>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:20px">PWA → Hetzner Backend → JSON Files (kein Vault nötig)</p>
+      <div class="flow-row">
+        <div class="flow-node output">Habits PWA</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node process">Hetzner /api/habits</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node source">habits.json + habit-log.json</div>
+      </div>
+      <div style="font-size:12px;color:var(--success);margin-top:8px;padding-left:4px">
+        ✅ Funktioniert unabhängig vom PC — Habits-Daten leben auf Hetzner
+      </div>
+    </div>
+  </div>
+
+  <!-- API ENDPOINTS TABLE -->
+  <div class="fade-in stagger-4">
+    <h2>Alle API Endpoints</h2>
+    <div class="glass" style="padding:4px;margin-bottom:48px;overflow-x:auto">
+      <table class="api-table">
+        <thead>
+          <tr>
+            <th>Route</th>
+            <th>Funktion</th>
+            <th>Datenquelle</th>
+            <th>Update-Modus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="route">/api/calendar/today</td>
+            <td>Heutige Termine</td>
+            <td><span class="source-tag api">Google API</span></td>
+            <td>Webhook + Poll 60s</td>
+          </tr>
+          <tr>
+            <td class="route">/api/tasks</td>
+            <td>Vault-Aufgaben</td>
+            <td><span class="source-tag vault">Vault MD</span></td>
+            <td>File Watcher</td>
+          </tr>
+          <tr>
+            <td class="route">/api/tasks/todoist</td>
+            <td>Todoist Tasks</td>
+            <td><span class="source-tag api">Todoist API</span></td>
+            <td>Webhook (Server) / Poll 10s (Lokal)</td>
+          </tr>
+          <tr>
+            <td class="route">/api/habits</td>
+            <td>Alle Habits + Status</td>
+            <td><span class="source-tag file">JSON Files</span></td>
+            <td>On demand</td>
+          </tr>
+          <tr>
+            <td class="route">/api/habits/:id/score</td>
+            <td>Habit abhaken</td>
+            <td><span class="source-tag file">JSON Files</span></td>
+            <td>Sofort (Write)</td>
+          </tr>
+          <tr>
+            <td class="route">/api/weekly-goals</td>
+            <td>Weekly Goals KW</td>
+            <td><span class="source-tag vault">Vault MD</span></td>
+            <td>On demand</td>
+          </tr>
+          <tr>
+            <td class="route">/api/sops</td>
+            <td>Alle Workspaces</td>
+            <td><span class="source-tag vault">Vault MD</span></td>
+            <td>On demand</td>
+          </tr>
+          <tr>
+            <td class="route">/api/sops/:ws/:file</td>
+            <td>SOP Detail</td>
+            <td><span class="source-tag vault">Vault MD</span></td>
+            <td>On demand</td>
+          </tr>
+          <tr>
+            <td class="route">/api/changelog</td>
+            <td>Git History (SOPs)</td>
+            <td><span class="source-tag mixed">Git + Vault</span></td>
+            <td>On demand</td>
+          </tr>
+          <tr>
+            <td class="route">/api/asana/tasks</td>
+            <td>Asana Projekt-Tasks</td>
+            <td><span class="source-tag api">Asana API</span></td>
+            <td>On demand</td>
+          </tr>
+          <tr>
+            <td class="route">/api/health-data</td>
+            <td>Schritte heute</td>
+            <td><span class="source-tag api">Apple Health</span></td>
+            <td>On demand</td>
+          </tr>
+          <tr>
+            <td class="route">/api/inbox</td>
+            <td>Inbox Verarbeitung</td>
+            <td><span class="source-tag vault">Vault MD</span></td>
+            <td>On demand</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- BOTTLENECKS -->
+  <div class="fade-in stagger-5">
+    <h2>Bekannte Bottlenecks & Risiken</h2>
+    <div class="bottleneck-grid" style="margin-bottom:48px">
+      <div class="glass bottleneck">
+        <div class="severity high">Kritisch</div>
+        <h4>Kein Auto-Restart lokal</h4>
+        <p>Backend/Frontend starten via VBS hidden — wenn sie crashen, gibt es keine Fehlermeldung und keinen Neustart. Dashboard zeigt dann leere Daten oder lädt gar nicht.</p>
+      </div>
+      <div class="glass bottleneck">
+        <div class="severity high">Kritisch</div>
+        <h4>Windows \r\n Parsing</h4>
+        <p>Vault-Dateien auf Windows haben \r\n. Alle Regex-Parser brauchen .replace(/\r/g, "") — sonst matchen Checkbox-Patterns nicht. Heute gefixt in 3 Services.</p>
+      </div>
+      <div class="glass bottleneck">
+        <div class="severity low">Gelöst</div>
+        <h4>Git-Sync jetzt via Webhook (~1-2s)</h4>
+        <p>GitHub Webhook triggert sofortigen Pull auf Hetzner. 30s-Polling bleibt als Fallback. Einziger verbleibender Delay: lokale Änderungen müssen committed + gepusht werden.</p>
+      </div>
+      <div class="glass bottleneck">
+        <div class="severity medium">Mittel</div>
+        <h4>Kein Prod-Build Frontend</h4>
+        <p>Das Dashboard-Frontend läuft nur als Vite Dev Server — kein Production Build, kein Server-Side Rendering, nicht auf Hetzner deployed. Nur lokal nutzbar.</p>
+      </div>
+      <div class="glass bottleneck">
+        <div class="severity medium">Mittel</div>
+        <h4>Uncommitted Changes</h4>
+        <p>Viele lokale Änderungen sind nicht committed (api.ts Fallback-Logik, Cache-Updates, etc.). Hetzner hat eine ältere Codeversion als der lokale PC.</p>
+      </div>
+      <div class="glass bottleneck">
+        <div class="severity low">Info</div>
+        <h4>Habits nur auf Hetzner</h4>
+        <p>Die Habit-Daten (habits.json, habit-log.json) leben nur auf dem Hetzner Server. Kein Backup, kein Sync zum Vault. Bei Server-Verlust: Daten weg.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- WHAT WE HAVE vs WHAT'S MISSING -->
+  <div class="fade-in stagger-6">
+    <h2>Was wir haben vs. was fehlt</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:48px">
+      <div class="glass" style="padding:24px">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--success)">✅ Haben wir</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+          <div>🖥️ Dashboard mit 6 Pages (Heute, Planning, ChangeLog, SOPs, AIEdge, PersonalDev)</div>
+          <div>📱 Habits PWA (installiert auf Handy, eigener Habit-Service)</div>
+          <div>☁️ Hetzner Backend (24/7, alle APIs)</div>
+          <div>📅 Google Calendar (OAuth + Webhooks)</div>
+          <div>✅ Todoist Integration (Polling 10s)</div>
+          <div>📋 Asana Integration</div>
+          <div>🏃 Apple Health Steps</div>
+          <div>📝 SOP-System mit Workspaces</div>
+          <div>📊 Git Changelog Visualisierung</div>
+          <div>🎯 Weekly Goals aus Vault</div>
+          <div>🔄 WebSocket Live-Updates</div>
+          <div>🚀 Windows Autostart (VBS → Startup-Ordner)</div>
+          <div>🌐 Cloudflare Tunnel (HTTPS für Webhooks)</div>
+          <div>💾 In-Memory Cache mit Staleness Detection</div>
+        </div>
+      </div>
+      <div class="glass" style="padding:24px">
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--warning)">⚠️ Fehlt / Offen</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:13px">
+          <div>🔄 Auto-Restart bei Crash (PM2 oder Windows Service)</div>
+          <div>📦 Frontend Prod-Build auf Hetzner (für Zugriff ohne PC)</div>
+          <div>💾 Habit-Daten Backup (derzeit nur auf Hetzner, kein Sync)</div>
+          <div>📊 Health Monitoring / Error Logging</div>
+          <div>🔐 Richtige Auth (aktuell nur hardcoded Bearer Token)</div>
+          <div>📱 Dashboard PWA (mobile Version des Haupt-Dashboards)</div>
+          <div>🔔 Push Notifications (Dreh-Briefing, Task-Reminder)</div>
+          <div>⏰ Uncommitted Changes committen + deployen</div>
+          <div>🖼️ SOP-Bilder reparieren (separater Bug)</div>
+          <div>📈 Performance Monitoring (API Response Times)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:32px 0;font-size:12px;color:var(--text-muted)">
+    Stand: 16. April 2026 — generiert mit Claude Code
+  </div>
+</div>
+
+<script>
+function setScenario(mode) {
+  // Update toggle buttons
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + mode).classList.add('active');
+
+  const pcServices = document.querySelectorAll('#pc-services .service-item');
+
+  if (mode === 'on') {
+    // Everything on
+    pcServices.forEach(item => {
+      item.classList.remove('inactive');
+      item.querySelector('.dot').className = 'dot on';
+    });
+    document.getElementById('pc-card').style.opacity = '1';
+    updateFlowVisibility(true, false);
+  }
+  else if (mode === 'off') {
+    // PC completely off
+    pcServices.forEach(item => {
+      item.classList.add('inactive');
+      item.querySelector('.dot').className = 'dot off';
+    });
+    document.getElementById('pc-card').style.opacity = '0.5';
+    updateFlowVisibility(false, false);
+  }
+  else if (mode === 'nobackend') {
+    // PC on, but backend crashed
+    pcServices.forEach((item, i) => {
+      if (i <= 3) {
+        // Backend, File Watcher, WebSocket = off
+        item.classList.add('inactive');
+        item.querySelector('.dot').className = 'dot off';
+      } else {
+        // Tunnel, Chrome, Vault = on
+        item.classList.remove('inactive');
+        item.querySelector('.dot').className = 'dot on';
+      }
+    });
+    // Frontend on but degraded
+    pcServices[1].classList.remove('inactive');
+    pcServices[1].querySelector('.dot').className = 'dot stale';
+
+    document.getElementById('pc-card').style.opacity = '0.85';
+    updateFlowVisibility(false, true);
+  }
+
+  // Hetzner always on
+  document.querySelectorAll('[data-server="always"]').forEach(item => {
+    item.classList.remove('inactive');
+    item.querySelector('.dot').className = item.querySelector('.dot').className; // keep current
+  });
+}
+
+function updateFlowVisibility(pcOn, degraded) {
+  const flowLocal = document.getElementById('flow-local');
+  const flowFallback = document.getElementById('flow-fallback');
+
+  if (pcOn) {
+    flowLocal.style.opacity = '1';
+    flowLocal.style.border = '1px solid rgba(48,209,88,0.2)';
+    flowFallback.style.opacity = '0.4';
+    flowFallback.style.border = '1px solid rgba(255,255,255,0.08)';
+  } else if (degraded) {
+    flowLocal.style.opacity = '0.3';
+    flowLocal.style.border = '1px solid rgba(255,69,58,0.15)';
+    flowFallback.style.opacity = '1';
+    flowFallback.style.border = '1px solid rgba(255,214,10,0.2)';
+  } else {
+    flowLocal.style.opacity = '0.2';
+    flowLocal.style.border = '1px solid rgba(255,69,58,0.1)';
+    flowFallback.style.opacity = '0.5';
+    flowFallback.style.border = '1px solid rgba(255,255,255,0.08)';
+  }
+}
+
+// Init
+setScenario('on');
+</script>
+
+</body>
+</html>

@@ -1,23 +1,49 @@
 import { Router } from "express";
+import { readFileSync, writeFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 export const healthDataRouter = Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const PERSIST_PATH = join(__dirname, "../../data/health-data.json");
+
+function localToday(): string {
+  return new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD in local timezone
+}
 
 // In-memory store for today's health data
 let healthData: {
   steps: number;
   lastUpdated: string;
   date: string;
-} = {
-  steps: 0,
-  lastUpdated: new Date().toISOString(),
-  date: new Date().toISOString().slice(0, 10),
-};
+} = loadPersistedData();
+
+function loadPersistedData() {
+  try {
+    const raw = readFileSync(PERSIST_PATH, "utf-8");
+    const data = JSON.parse(raw);
+    if (data.date === localToday() && data.steps > 0) {
+      console.log(`[Health] Restored ${data.steps} steps from disk`);
+      return data;
+    }
+  } catch {}
+  return { steps: 0, lastUpdated: new Date().toISOString(), date: localToday() };
+}
+
+function persistData() {
+  try {
+    writeFileSync(PERSIST_PATH, JSON.stringify(healthData, null, 2));
+  } catch {}
+}
 
 // Reset at midnight
 function checkDateReset() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   if (healthData.date !== today) {
     healthData = { steps: 0, lastUpdated: new Date().toISOString(), date: today };
+    persistData();
   }
 }
 
@@ -25,7 +51,7 @@ function checkDateReset() {
 healthDataRouter.get("/", async (_req, res) => {
   checkDateReset();
 
-  // If local has no steps, try fetching from server
+  // If local has no steps, try fetching from server (only use if data is from today)
   if (healthData.steps === 0) {
     try {
       const serverRes = await fetch("https://46-225-160-248.nip.io/api/health-data", {
@@ -33,9 +59,11 @@ healthDataRouter.get("/", async (_req, res) => {
       });
       if (serverRes.ok) {
         const serverData = await serverRes.json();
-        if (serverData.data?.steps > 0) {
+        const today = localToday();
+        if (serverData.data?.steps > 0 && serverData.data?.date === today) {
           healthData.steps = serverData.data.steps;
           healthData.lastUpdated = serverData.data.lastUpdated;
+          persistData();
         }
       }
     } catch {}
@@ -67,7 +95,7 @@ healthDataRouter.post("/", (req, res) => {
     );
     if (stepMetric && Array.isArray(stepMetric.data)) {
       // Sum all step entries for today
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localToday();
       steps = Math.round(
         stepMetric.data
           .filter((d: any) => d.date?.startsWith(today) || d.start?.startsWith(today))
@@ -92,6 +120,7 @@ healthDataRouter.post("/", (req, res) => {
   if (steps > 0) {
     healthData.steps = steps;
     healthData.lastUpdated = new Date().toISOString();
+    persistData();
     console.log(`[Health] Steps updated: ${steps}`);
   }
 

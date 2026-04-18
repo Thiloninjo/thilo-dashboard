@@ -2,19 +2,16 @@ import { useState, useCallback } from "react";
 import { Nav } from "./components/Nav";
 import { PageSwiper } from "./components/PageSwiper";
 import { CommandBar } from "./components/CommandBar";
-import { DynamicWallpaper } from "./components/DynamicWallpaper";
+import { SettingsMenu } from "./components/SettingsMenu";
+import { DrehAlert } from "./components/DrehAlert";
+import { DrehBriefing } from "./pages/heute/DrehBriefing";
+import { BackgroundRenderer, type BackgroundId } from "./components/backgrounds";
 import { Heute } from "./pages/Heute";
 import { ChangeLog } from "./pages/ChangeLog";
 import { SOPs } from "./pages/SOPs";
 import { AIEdge } from "./pages/AIEdge";
 import { PersonalDev } from "./pages/PersonalDev";
 import { Planning } from "./pages/Planning";
-
-function LiquidGlassFilter() {
-  return (
-    <svg style={{ display: "none" }}></svg>
-  );
-}
 
 export const TAB_LABELS = ["Heute", "Planning", "Change-Log", "SOPs", "AI-Edge", "Personal Dev"];
 
@@ -31,10 +28,19 @@ const pages = [
   <PageWrap key="personaldev"><PersonalDev /></PageWrap>,
 ];
 
+function getStoredBg(): BackgroundId {
+  try {
+    const stored = localStorage.getItem("dashboard-bg");
+    if (stored) return stored as BackgroundId;
+  } catch { /* ignore */ }
+  return "time-of-day";
+}
+
 export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
-  // dragProgress: 0 = no drag, fractional = between pages (e.g. 0.5 = halfway to next)
   const [dragProgress, setDragProgress] = useState(0);
+  const [bgId, setBgId] = useState<BackgroundId>(getStoredBg);
+  const [drehOpen, setDrehOpen] = useState(false);
 
   const handleNavDrag = useCallback((progress: number) => {
     setDragProgress(progress);
@@ -45,15 +51,24 @@ export default function App() {
     setDragProgress(0);
   }, []);
 
+  const handleChangeBg = useCallback((id: BackgroundId) => {
+    setBgId(id);
+    try { localStorage.setItem("dashboard-bg", id); } catch { /* ignore */ }
+  }, []);
+
   return (
     <>
-      <DynamicWallpaper />
-      <LiquidGlassFilter />
-      <Nav
-        activeIndex={activeIndex}
-        onSelect={handleNavSelect}
-        onDragProgress={handleNavDrag}
-      />
+      <BackgroundRenderer id={bgId} />
+      <div className="sticky top-4 z-10 flex items-center justify-center px-7 pt-4 gap-3">
+        <DrehAlert onOpen={() => setDrehOpen(true)} />
+        <Nav
+          activeIndex={activeIndex}
+          onSelect={handleNavSelect}
+          onDragProgress={handleNavDrag}
+        />
+        <SettingsMenu currentBg={bgId} onChangeBg={handleChangeBg} />
+      </div>
+      <DrehBriefing open={drehOpen} onClose={() => setDrehOpen(false)} />
       <main className="w-full" style={{ overflow: "visible" }}>
         <PageSwiper
           activeIndex={activeIndex}

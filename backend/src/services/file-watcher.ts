@@ -40,16 +40,33 @@ function getPriority(relativePath: string): "high" | "low" {
   return HIGH_PRIORITY_PATTERNS.some((p) => relativePath.includes(p)) ? "high" : "low";
 }
 
-// Auto-pull vault from GitHub every 30 seconds (picks up server-side SOP commits)
-async function startVaultSync(): Promise<void> {
-  const { simpleGit } = await import("simple-git");
-  const git = simpleGit(CONFIG.vaultPath);
+// Auto-pull vault from GitHub — only on server (env DASHBOARD_SERVER=1), not local
+// Locally, tsx watch would restart the backend on every pulled file change → cache wipe → data reset
+let gitInstance: any = null;
 
+async function startVaultSync(): Promise<void> {
+  if (!process.env.DASHBOARD_SERVER) return;
+
+  const { simpleGit } = await import("simple-git");
+  gitInstance = simpleGit(CONFIG.vaultPath);
+
+  // Fallback polling every 30s (in case webhook misses something)
   setInterval(async () => {
     try {
-      await git.pull("origin", "master", { "--quiet": null });
+      await gitInstance.pull("origin", "master", { "--quiet": null });
     } catch {}
   }, 30_000);
+}
+
+// Triggered by GitHub webhook — instant pull instead of waiting for 30s interval
+export async function triggerVaultPull(): Promise<boolean> {
+  if (!gitInstance) return false;
+  try {
+    const result = await gitInstance.pull("origin", "master", { "--quiet": null });
+    return result.files.length > 0;
+  } catch {
+    return false;
+  }
 }
 
 export function startFileWatcher(server: import("http").Server): void {

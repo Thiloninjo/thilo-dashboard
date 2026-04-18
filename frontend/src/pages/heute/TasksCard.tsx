@@ -10,6 +10,7 @@ interface Props {
   vaultTasks: Task[];
   todoistTasks: Task[];
   onRefresh: () => void;
+  onOpenBoard?: () => void;
 }
 
 function getTaskDate(task: Task): string | undefined {
@@ -26,17 +27,21 @@ function getTaskTime(task: Task): string | undefined {
   return undefined;
 }
 
+function localToday(): string {
+  const n = new Date();
+  return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}-${String(n.getDate()).padStart(2,"0")}`;
+}
+
 function isOverdue(task: Task): boolean {
   const date = getTaskDate(task);
   if (!date || task.completed) return false;
-  const today = new Date().toISOString().slice(0, 10);
-  return date < today;
+  return date < localToday();
 }
 
 function formatDueLabel(task: Task): string {
   const date = getTaskDate(task);
   if (!date) return "";
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localToday();
   const time = getTaskTime(task);
 
   if (date === today) {
@@ -52,7 +57,7 @@ function formatDueLabel(task: Task): string {
   return time ? `${formatted}, ${time}` : formatted;
 }
 
-export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
+export function TasksCard({ vaultTasks, todoistTasks, onRefresh, onOpenBoard }: Props) {
   const allTasks = [...vaultTasks, ...todoistTasks];
 
   // Track every task ID we've ever seen this session
@@ -148,7 +153,17 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <GlassCard glow>
-        <CardHeader title="Tasks heute" />
+        <div className="flex items-center justify-between">
+          <CardHeader title="Tasks heute" />
+          {onOpenBoard && (
+            <button
+              onClick={onOpenBoard}
+              className="text-[11px] font-semibold text-white/40 hover:text-white/70 transition-colors px-2.5 py-1 rounded-lg hover:bg-white/8"
+            >
+              Alle →
+            </button>
+          )}
+        </div>
         <div className="flex items-center justify-between">
           <div className="flex items-baseline gap-1">
             <motion.span

@@ -14,6 +14,7 @@ inboxRouter.post("/", async (req, res) => {
     const result = await processInboxMessage(text.trim());
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: "Processing failed" });
+    console.error("[Inbox] Error:", err);
+    res.status(500).json({ error: "Processing failed", detail: String(err) });
   }
 });

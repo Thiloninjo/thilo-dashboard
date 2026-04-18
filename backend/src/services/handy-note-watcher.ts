@@ -3,8 +3,8 @@ import { join, basename } from "path";
 import { CONFIG } from "../config.js";
 import { closeTodoistTask } from "./todoist.js";
 
-const HANDY_NOTE_DIR = "1 - Meine Notizen/Handy Note Dump";
-const ARCHIVE_DIR = "1 - Meine Notizen/Handy Note Dump/Archiv";
+const HANDY_NOTE_DIR = "2 - Meine Notizen/Handy Note Dump";
+const ARCHIVE_DIR = "2 - Meine Notizen/Handy Note Dump/Archiv";
 
 // ONLY explicit prefixes trigger task creation — no guessing
 const TASK_PATTERNS = [

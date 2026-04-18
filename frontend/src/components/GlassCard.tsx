@@ -7,9 +7,11 @@ interface Props {
   style?: React.CSSProperties;
   glow?: boolean;
   onClick?: () => void;
+  onDragOver?: (e: React.DragEvent) => void;
+  onDrop?: (e: React.DragEvent) => void;
 }
 
-export function GlassCard({ children, className = "", style, glow = false, onClick }: Props) {
+export function GlassCard({ children, className = "", style, glow = false, onClick, onDragOver, onDrop }: Props) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -17,6 +19,8 @@ export function GlassCard({ children, className = "", style, glow = false, onCli
       whileHover={{ scale: 1.005, y: -1 }}
       transition={{ duration: 0.3 }}
       onClick={onClick}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
       style={style}
       className={`
         liquid-glass p-5

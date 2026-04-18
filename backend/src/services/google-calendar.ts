@@ -81,3 +81,52 @@ export async function getEventsForDate(date?: string): Promise<CalendarEvent[]> 
 }
 
 export const getTodayEvents = () => getEventsForDate();
+
+// === Google Calendar Push Notifications (Webhook) ===
+// Registers a watch channel that expires after ~7 days.
+// Call this on server start and set a renewal timer.
+const WEBHOOK_URL = "https://46-225-160-248.nip.io/webhooks/google-calendar";
+let watchChannelId: string | null = null;
+let watchResourceId: string | null = null;
+
+export async function startCalendarWatch(): Promise<void> {
+  const hasTokens = await loadTokens();
+  if (!hasTokens) {
+    console.log("[Calendar Watch] No tokens — skipping webhook registration");
+    return;
+  }
+
+  const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+  const channelId = `dashboard-${Date.now()}`;
+
+  try {
+    // Stop existing watch if any
+    if (watchChannelId && watchResourceId) {
+      try {
+        await calendar.channels.stop({ requestBody: { id: watchChannelId, resourceId: watchResourceId } });
+      } catch {}
+    }
+
+    const res = await calendar.events.watch({
+      calendarId: "primary",
+      requestBody: {
+        id: channelId,
+        type: "web_hook",
+        address: WEBHOOK_URL,
+        // Expire in 7 days (max allowed)
+        expiration: String(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    watchChannelId = res.data.id || null;
+    watchResourceId = res.data.resourceId || null;
+    console.log(`[Calendar Watch] Registered — channel ${channelId}, expires in 7 days`);
+
+    // Auto-renew 1 hour before expiration (every 6 days 23 hours)
+    setTimeout(() => startCalendarWatch(), 6 * 24 * 60 * 60 * 1000 + 23 * 60 * 60 * 1000);
+  } catch (err) {
+    console.error("[Calendar Watch] Failed to register:", err);
+    // Retry in 5 minutes
+    setTimeout(() => startCalendarWatch(), 5 * 60 * 1000);
+  }
+}

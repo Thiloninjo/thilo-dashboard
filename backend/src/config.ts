@@ -17,8 +17,8 @@ export const CONFIG = {
   todoist: {
     apiToken: process.env.TODOIST_API_TOKEN || "",
   },
-  habitica: {
-    userId: process.env.HABITICA_USER_ID || "",
-    apiToken: process.env.HABITICA_API_TOKEN || "",
+  asana: {
+    accessToken: process.env.ASANA_ACCESS_TOKEN || "",
+    workspaceGid: process.env.ASANA_WORKSPACE_GID || "",
   },
 };

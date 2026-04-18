@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { GlassCard } from "../components/GlassCard";
 import { apiFetch } from "../lib/api";
+import { onWSMessage } from "../lib/ws";
 import type { Workspace, SOPSummary, SOPDetail, CachedResponse } from "../lib/types";
 
 // Simple markdown-to-JSX renderer for SOP content
@@ -101,12 +102,30 @@ export function SOPs() {
   const [selectedSOP, setSelectedSOP] = useState<string | null>(null);
   const [detail, setDetail] = useState<SOPDetail | null>(null);
 
+  const selectedWorkspaceRef = useRef(selectedWorkspace);
+  const selectedSOPRef = useRef(selectedSOP);
+  selectedWorkspaceRef.current = selectedWorkspace;
+  selectedSOPRef.current = selectedSOP;
+
+  const refreshDetail = useCallback(async () => {
+    const ws = selectedWorkspaceRef.current;
+    const sop = selectedSOPRef.current;
+    if (!ws || !sop) return;
+    const r = await apiFetch<CachedResponse<SOPDetail>>(`/sops/${encodeURIComponent(ws)}/${encodeURIComponent(sop)}`).catch(() => null);
+    if (r) setDetail(r.data);
+  }, []);
+
   useEffect(() => {
     const fetch = () => apiFetch<CachedResponse<Workspace[]>>("/sops").then((r) => setWorkspaces(r.data)).catch(() => {});
     fetch();
     const interval = setInterval(fetch, 10_000);
-    return () => clearInterval(interval);
-  }, []);
+    const unsub = onWSMessage((msg) => {
+      if (msg.type === "vault-changed" && msg.file?.includes("01_SOPs")) {
+        refreshDetail();
+      }
+    });
+    return () => { clearInterval(interval); unsub(); };
+  }, [refreshDetail]);
 
   async function openWorkspace(name: string) {
     setSelectedWorkspace(name);
@@ -131,13 +150,16 @@ export function SOPs() {
   if (detail) {
     return (
       <>
-        <button
+        <motion.button
           onClick={goBack}
           className="liquid-glass mb-4 px-4 py-2 !rounded-full text-sm text-white font-semibold flex items-center gap-2"
-          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}
+          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)", transformStyle: "preserve-3d" }}
+          whileHover={{ scale: 1.05, rotateX: -4, rotateY: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
+          whileTap={{ scale: 0.92, rotateX: 2, rotateY: -3, boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}
+          transition={{ type: "spring", stiffness: 500, damping: 20 }}
         >
           ← Zurück
-        </button>
+        </motion.button>
         <AnimatePresence>
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -166,13 +188,16 @@ export function SOPs() {
   if (selectedWorkspace) {
     return (
       <>
-        <button
+        <motion.button
           onClick={goBack}
           className="liquid-glass mb-4 px-4 py-2 !rounded-full text-sm text-white font-semibold flex items-center gap-2"
-          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)" }}
+          style={{ textShadow: "0 1px 3px rgba(0,0,0,0.3)", transformStyle: "preserve-3d" }}
+          whileHover={{ scale: 1.05, rotateX: -4, rotateY: 6, boxShadow: "0 8px 24px rgba(0,0,0,0.3)" }}
+          whileTap={{ scale: 0.92, rotateX: 2, rotateY: -3, boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}
+          transition={{ type: "spring", stiffness: 500, damping: 20 }}
         >
           ← Zurück
-        </button>
+        </motion.button>
         <h2 className="text-2xl font-bold mb-6 text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}>
           {selectedWorkspace}
         </h2>
@@ -195,6 +220,7 @@ export function SOPs() {
   const workspaceImages: Record<string, string> = {
     "Tennis-Ring-Lual": "/sop-trl.png",
     "Cavy": "/sop-cavy.png",
+    "Thilo": "/hero-thilo.png",
   };
 
   return (
@@ -233,6 +259,8 @@ export function SOPs() {
                     bottom: "0px",
                     ...(ws.name === "Tennis-Ring-Lual"
                       ? { right: "8%" }
+                      : ws.name === "Thilo"
+                      ? { right: "6%" }
                       : { right: "12%" }),
                   }}
                 />

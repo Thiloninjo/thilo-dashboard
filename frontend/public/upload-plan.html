@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Content Review & Upload Plan — 14.04.–02.05.2026</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'SF Pro Display', -apple-system, 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #fff; padding: 24px 32px; min-height: 100vh; }
+
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  .sub { color: rgba(255,255,255,0.35); font-size: 13px; margin-bottom: 28px; }
+
+  /* Summary Cards */
+  .summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .card { padding: 16px 18px; border-radius: 14px; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; }
+  .card:hover { transform: translateY(-1px); }
+  .card.active { border-color: rgba(255,255,255,0.2); }
+  .card-num { font-size: 32px; font-weight: 800; line-height: 1; }
+  .card-label { font-size: 12px; font-weight: 600; margin-top: 4px; opacity: 0.7; }
+  .card-sub { font-size: 11px; margin-top: 2px; opacity: 0.4; }
+
+  .card-ready { background: rgba(48,209,88,0.08); }
+  .card-ready .card-num { color: #30D158; }
+  .card-fix { background: rgba(255,214,10,0.06); }
+  .card-fix .card-num { color: #FFD60A; }
+  .card-review { background: rgba(0,122,255,0.06); }
+  .card-review .card-num { color: #0A84FF; }
+  .card-lual { background: rgba(191,90,242,0.06); }
+  .card-lual .card-num { color: #BF5AF2; }
+
+  /* Progress Bar */
+  .progress-wrap { margin-bottom: 28px; }
+  .progress-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden; display: flex; }
+  .progress-seg { height: 100%; transition: width 0.4s; }
+  .progress-seg.seg-ready { background: #30D158; }
+  .progress-seg.seg-fix { background: #FFD60A; }
+  .progress-seg.seg-review { background: #0A84FF; }
+  .progress-seg.seg-lual { background: #BF5AF2; }
+  .progress-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: rgba(255,255,255,0.3); }
+
+  /* Filters */
+  .filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filter-btn { font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.15s; }
+  .filter-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+  .filter-btn.active { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.25); }
+
+  /* Days */
+  .day { margin-bottom: 14px; }
+  .day.hidden { display: none; }
+  .day-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.25); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .day-label .overdue { color: #FF453A; font-weight: 800; font-size: 9px; background: rgba(255,69,58,0.15); padding: 1px 6px; border-radius: 6px; }
+  .day-label .today-tag { color: #30D158; font-weight: 800; font-size: 9px; background: rgba(48,209,88,0.15); padding: 1px 6px; border-radius: 6px; }
+
+  /* Rows */
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,0.03); margin-bottom: 3px; cursor: pointer; transition: all 0.15s; position: relative; }
+  .row:hover { background: rgba(255,255,255,0.07); }
+  .row.expanded { background: rgba(255,255,255,0.06); border-radius: 10px 10px 0 0; margin-bottom: 0; }
+
+  .row.is-ready { border-left: 3px solid rgba(48,209,88,0.5); }
+  .row.is-fix { border-left: 3px solid rgba(255,214,10,0.5); }
+  .row.is-review { border-left: 3px solid rgba(0,122,255,0.4); }
+  .row.is-lual { border-left: 3px solid rgba(191,90,242,0.4); }
+
+  .status { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; white-space: nowrap; min-width: 80px; text-align: center; }
+  .status-ready { background: rgba(48,209,88,0.15); color: rgba(125,255,170,0.9); }
+  .status-fix { background: rgba(255,214,10,0.12); color: rgba(255,240,160,0.9); }
+  .status-review { background: rgba(0,122,255,0.12); color: rgba(100,180,255,0.9); }
+  .status-lual { background: rgba(191,90,242,0.12); color: rgba(210,160,255,0.9); }
+
+  .filename { font-size: 13px; font-weight: 500; flex: 1; }
+  .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
+  .tag-tipp { background: rgba(0,122,255,0.12); color: rgba(100,180,255,0.8); }
+  .tag-training { background: rgba(138,43,226,0.12); color: rgba(200,150,255,0.8); }
+  .tag-reaction { background: rgba(255,159,10,0.12); color: rgba(255,200,100,0.8); }
+
+  .expand-icon { font-size: 12px; color: rgba(255,255,255,0.2); transition: transform 0.2s; width: 16px; text-align: center; }
+  .row.expanded .expand-icon { transform: rotate(90deg); }
+  .row.no-details .expand-icon { visibility: hidden; }
+
+  /* Detail panel */
+  .detail { background: rgba(255,255,255,0.025); border-radius: 0 0 10px 10px; padding: 0 16px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.2s; margin-bottom: 3px; border-left: 3px solid transparent; }
+  .detail.open { padding: 14px 16px; max-height: 800px; }
+  .detail.is-fix { border-left-color: rgba(255,214,10,0.3); }
+  .detail.is-review { border-left-color: rgba(0,122,255,0.2); }
+  .detail.is-lual { border-left-color: rgba(191,90,242,0.2); }
+
+  .detail h4 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.3); margin-bottom: 8px; }
+  .detail ul { list-style: none; padding: 0; }
+  .detail li { font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.7); padding: 6px 0; display: flex; align-items: flex-start; gap: 10px; }
+  .detail li.checked { color: rgba(255,255,255,0.25); text-decoration: line-through; }
+  .detail li .cb { flex-shrink: 0; width: 18px; height: 18px; border-radius: 5px; border: 2px solid rgba(255,255,255,0.2); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; margin-top: 1px; }
+  .detail li .cb:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.05); }
+  .detail li.checked .cb { border-color: #30D158; background: rgba(48,209,88,0.2); }
+  .detail li.checked .cb::after { content: '✓'; color: #30D158; font-size: 12px; font-weight: 800; }
+  .detail li .cb-text { flex: 1; }
+  .detail .note { font-size: 12px; color: rgba(255,255,255,0.35); margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); font-style: italic; }
+  .detail .dreh-info { font-size: 11px; color: rgba(255,255,255,0.25); margin-bottom: 6px; }
+  .detail .progress-mini { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .detail .progress-mini-bar { flex: 1; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.06); overflow: hidden; }
+  .detail .progress-mini-fill { height: 100%; background: #30D158; border-radius: 2px; transition: width 0.3s; }
+  .detail .progress-mini-label { font-size: 11px; color: rgba(255,255,255,0.3); white-space: nowrap; }
+  .badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 6px; margin-left: 6px; }
+  .badge-done { background: rgba(48,209,88,0.15); color: #30D158; }
+  .badge-progress { background: rgba(255,214,10,0.12); color: rgba(255,240,160,0.9); }
+
+  .copy-btn { font-size: 11px; color: rgba(255,255,255,0.3); background: none; border: 1px solid rgba(255,255,255,0.1); padding: 3px 10px; border-radius: 6px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .copy-btn:hover { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.3); }
+  .copy-btn.copied { color: #30D158; border-color: rgba(48,209,88,0.4); }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(48,209,88,0.2); border: 1px solid rgba(48,209,88,0.4); color: #7DFFAA; padding: 10px 24px; border-radius: 14px; font-size: 13px; font-weight: 600; opacity: 0; transition: opacity 0.2s; pointer-events: none; backdrop-filter: blur(20px); z-index: 100; }
+  .toast.show { opacity: 1; }
+
+  /* TODO section */
+  .todo-section { margin-top: 40px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .todo-section h2 { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+  .todo-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 14px; border-radius: 10px; background: rgba(255,255,255,0.03); margin-bottom: 4px; font-size: 14px; line-height: 1.5; }
+  .todo-num { font-weight: 800; color: rgba(255,255,255,0.3); min-width: 20px; }
+  .todo-text { flex: 1; color: rgba(255,255,255,0.7); }
+
+  /* Overlay-Analyse callout */
+  .callout { margin-top: 24px; padding: 14px 18px; border-radius: 12px; background: rgba(255,159,10,0.06); border: 1px solid rgba(255,159,10,0.15); }
+  .callout h3 { font-size: 13px; font-weight: 700; color: rgba(255,200,100,0.9); margin-bottom: 6px; }
+  .callout p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.5; }
+
+  @media (max-width: 800px) {
+    body { padding: 16px; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+    .filename { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Content Review & Upload Plan</h1>
+<p class="sub">14.04.–02.05.2026 · Review vom 04.04. + 10.04. konsolidiert · Stand: 15.04.2026</p>
+
+<div class="summary">
+  <div class="card card-ready active" onclick="filterBy('ready')">
+    <div class="card-num">11</div>
+    <div class="card-label">✅ FERTIG</div>
+    <div class="card-sub">Direkt hochladen</div>
+  </div>
+  <div class="card card-fix" onclick="filterBy('fix')">
+    <div class="card-num">10</div>
+    <div class="card-label">🔧 ALLEINE ANPASSEN</div>
+    <div class="card-sub">Fix → Upload, kein Review</div>
+  </div>
+  <div class="card card-review" onclick="filterBy('review')">
+    <div class="card-num">9</div>
+    <div class="card-label">✂️ ALLEINE SCHNEIDEN</div>
+    <div class="card-sub">Dann Lual drübergucken</div>
+  </div>
+  <div class="card card-lual" onclick="filterBy('lual')">
+    <div class="card-num">8</div>
+    <div class="card-label">👥 GEMEINSAM MIT LUAL</div>
+    <div class="card-sub">Zusammen am Schnittplatz</div>
+  </div>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar">
+    <div class="progress-seg seg-ready" style="width:28.9%"></div>
+    <div class="progress-seg seg-fix" style="width:26.3%"></div>
+    <div class="progress-seg seg-review" style="width:23.7%"></div>
+    <div class="progress-seg seg-lual" style="width:21.1%"></div>
+  </div>
+  <div class="progress-labels">
+    <span>11 fertig (29%)</span>
+    <span>10 fix alleine (26%)</span>
+    <span>9 Lual drübergucken (24%)</span>
+    <span>8 gemeinsam (21%)</span>
+  </div>
+</div>
+
+<div class="filters">
+  <button class="filter-btn active" onclick="filterBy('all')">Alle (38)</button>
+  <button class="filter-btn" onclick="filterBy('ready')">✅ Fertig (11)</button>
+  <button class="filter-btn" onclick="filterBy('fix')">🔧 Fix alleine (10)</button>
+  <button class="filter-btn" onclick="filterBy('review')">✂️ Schneiden → Review (9)</button>
+  <button class="filter-btn" onclick="filterBy('lual')">👥 Gemeinsam (8)</button>
+  <button class="filter-btn" onclick="filterBy('overdue')">⚠️ Überfällig</button>
+</div>
+
+<div id="plan"></div>
+<div class="toast" id="toast">Kopiert!</div>
+
+<div class="callout">
+  <h3>📋 Offene To-Dos (aus dem Review)</h3>
+  <p>1. Durchzählen: Alle Videos hier + gepostete abgleichen — fehlen neben den Marco-Videos noch welche? (Schmetterball, Ballwurf, ...?)<br>
+  2. Alle 11 fertigen Videos hochladen<br>
+  3. An Lual schicken<br>
+  4. Lual macht finalen Upload-Plan<br>
+  5. Alles Feedback was alleine anwendbar ist anwenden (10 Videos)<br>
+  6. In die Burg einziehen → gemeinsames Review + offene Videos schneiden (17 Videos)<br>
+  7. Alles final hochladen nach Upload-Plan<br>
+  8. Optional: LF</p>
+</div>
+
+<div class="callout" style="margin-top:12px; background: rgba(0,122,255,0.04); border-color: rgba(0,122,255,0.12);">
+  <h3>📐 Overlay-Analyse (To-Do)</h3>
+  <p>Overlay-Längen vergleichen: Bjarne-geschnittene vs. Thilo-geschnittene Videos. Vermutung: Wir machen sie zu kurz. Nicht dogmatisch lang, aber ruhig reinkommen lassen.</p>
+</div>
+
+<div class="callout" style="margin-top:12px; background: rgba(191,90,242,0.04); border-color: rgba(191,90,242,0.12);">
+  <h3>🎯 Hook-Timing & Scientific Method</h3>
+  <p>Bei JEDEM Video bewusst den Start nailen. Datenbank aufbauen: Sekunden bis Ball-Hit, Bildausschnitt, Position. Eigene Hypothesen → testen → auswerten. In SOPs verankern.</p>
+</div>
+
+<script>
+const data = [
+  { date: "14.04.", day: "Mo", overdue: true, files: [
+    { name: "Slice vs. Topspin", fullname: "0104 Tipp SF — Slice vs Topspin", type: "Tipp", status: "ready", dreh: "Dreh 5.3.", feedback: [] },
+    { name: "Paddle Reaction", fullname: "0204 Reaction SF — Paddle Reaction", type: "Reaction", status: "fix", dreh: "Update 10.04.", feedback: ["Overlay/Bild von Lual anpassen — das aktuelle Overlay muss ausgetauscht/überarbeitet werden"] },
+  ]},
+  { date: "15.04.", day: "Di", today: true, files: [
+    { name: "Marco — Rückhand", fullname: "0304 Training SF — Marco Rückhand", type: "Training", status: "review", dreh: "Dreh 5.3.", feedback: [
+      "Schläge nach Erklärung kürzen: nur 1 (max. 2) statt 4–5",
+      "Mouratoglou Editing Style: 'Stopp'-Moment analysieren und einbauen",
+      "Zwei Versionen machen — am Ende beide angucken und entscheiden"
+    ], note: "Alleine schneiden. Mouratoglou-Analyse siehe mouratoglou-analyse-briefing.md" },
+    { name: "Perfekter Vorhand-Treffpunkt", fullname: "0404 Tipp SF — Perfekter Vorhand-Treffpunkt", type: "Tipp", status: "review", dreh: "Dreh 29.3.", feedback: [
+      "Hook-Timing prüfen — knapper als sonst, ggf. 0,X Sek. mehr Vorlauf geben",
+      "Overlay bei 22:38–22:42: Starke Schulter / Schwache Schulter verdeutlichen",
+      "Overlay bei 22:52–22:58: Ebenfalls Overlays einsetzen",
+      "Generell zu abstrakt — VISUELL erklären: A) Wie der optimale Treffpunkt aussieht, B) Wie der zu späte Treffpunkt aussieht. Overlay-Quellen: 1) Aus diesem Video selbst (vermutlich Overlays gemacht), 2) Aus alten Videos mit gleichem Thema (z.B. Pendelschwung / früh ausholen — Szenen wo zu spät getroffen wird), 3) Jede normale Vorhand von Lual als Positiv-Beispiel: Starke Schulter immer auf gleicher Höhe wie schwache → daraus nehmen und einblenden",
+      "Overlay bei 23:34: Timing anpassen — verschwindet zu schnell. Optionen: A) Minimal früher starten, B) Minimal länger laufen lassen, C) An beiden Enden verlängern. Man muss verstehen was gerade passiert ist",
+      "23:35 'Der Schläger fällt' — Overlay muss zum Gesprochenen passen. Option A: Overlay zeitlich verschieben sodass man den Schläger fallen sieht WÄHREND Lual es sagt. Option B: Overlay etwas vorziehen, sodass Lual wieder sichtbar ist wenn er 'der Schläger fällt' sagt und es vormacht. Problem aktuell: Schläger ist im Overlay schon lange unten, man sieht die Schlagbewegung — kein passendes Bild zum Gesprochenen",
+      "23:54 Zeichnung KOMPLETT FALSCH ⚠️ — A) Strich in der Slow-Mo ist daneben eingezeichnet, B) Schulter-Einkreisung sitzt falsch, C) Vermutlich verzögert/hinterher, D) Zeichnung (Strich + Einkreisung) bleibt sichtbar wenn Overlay weg ist → landet mitten in Luals Gesicht. Alles fixen!",
+      "22:59–23:21: ZWEI VERSIONEN machen — eine MIT diesem Abschnitt, eine OHNE. Im Review entscheiden welche sauberer kommt"
+    ], note: "8 Feedback-Punkte. Komplex — viel Overlay-Arbeit. Thilo schneidet alleine, dann Review." },
+  ]},
+  { date: "16.04.", day: "Mi", files: [
+    { name: "Aufschlagverzögerung", fullname: "0504 Tipp SF — Die besten Aufschläger nutzen diesen Trick", type: "Tipp", status: "fix", dreh: "Review 10.04.", feedback: [
+      "Hook: Slow-Motion minimal kürzen — am Anfang ist die Hook minimal zu lange im Slow-Mode. Ganz wenig wegcutten, nicht viel",
+      "Overlay bei 0:12: Slow Motion statt Einfrieren — Schläger und Arm sollen gleichzeitig nach oben gehen. Statt normales Tempo + Einfrieren → in Slow Motion zeigen, sodass man in Echtzeit sieht wie Schlag und Ballwurf gleichzeitig hochgehen",
+      "Overlay bei 0:19: Ebenfalls Slow Motion einsetzen. Ob zusätzlich eingefroren wird oder nicht → Thilo entscheidet, je nachdem was am verständlichsten ist"
+    ] },
+    { name: "Johnny — Richtige Ausgangsposition oben", fullname: "0604 Training SF — Johnny Richtige Ausgangsposition oben", type: "Training", status: "fix", dreh: "Dreh 22.3.", feedback: [
+      "Erste 0,3 Sekunden rausschneiden (Mini-Hoppler)",
+      "Video bei 1:58 beenden — nach 'Weltklasse sieht ganz anders aus' mit Haken abschließen"
+    ], note: "Alleine. Einfache Cuts, klar definiert." },
+  ]},
+  { date: "17.04.", day: "Do", files: [
+    { name: "Vincent — Früh ausholen", fullname: "0704 Training SF — Vincent Früh ausholen", type: "Training", status: "fix", dreh: "Review 10.04.", feedback: [
+      "Ca. 2 Sekunden rausschneiden bei 1:13–1:15 ('du musst dich die ganze Zeit angucken')",
+      "Vincent-Schläge am Ende kürzen (ab 1:40): ersten Schlag raus, nur letzte zwei"
+    ] },
+    { name: "Drei Taktiken unschlagbar", fullname: "0804 Tipp SF — Drei Taktiken die dich unschlagbar machen", type: "Tipp", status: "review", dreh: "Dreh 29.3.", feedback: [
+      "Hook: Ganz bisschen länger vorne — minimal mehr Vorlauf",
+      "Bücken-Einblendung: Überlegen ob minimal kürzer, Slow Motion, oder so lassen"
+    ], note: "Alleine. Kreativer Spielraum. Nur Mikro-Veränderungen." },
+  ]},
+  { date: "18.04.", day: "Fr", files: [
+    { name: "Slice-Training mit Theo", fullname: "0904 Training SF — Slice-Training mit Theo", type: "Training", status: "ready", dreh: "Review 10.04.", feedback: [] },
+    { name: "Vorhandgriff beim Aufschlag", fullname: "1004 Tipp SF — Vorhandgriff beim Aufschlag korrigieren", type: "Tipp", status: "ready", dreh: "Review 10.04.", feedback: [] },
+  ]},
+  { date: "19.04.", day: "Sa", files: [
+    { name: "Crystal Reaction", fullname: "1104 Reaction SF — Crystal Reaction", type: "Reaction", status: "ready", dreh: "Update 10.04.", feedback: [] },
+    { name: "Zu spät am Treffpunkt — Marco", fullname: "1204 Training SF — Zu spät am Treffpunkt mit Marco", type: "Training", status: "lual", dreh: "Dreh 5.3.", feedback: [
+      "Detaillierte Schnitt-Bewertung mit Farbsystem (Grün/Gelb/Orange)",
+      "⚠️ IG-Limit: Video MUSS unter 3:00 — mindestens Orange+Gelb-Orange+Gelb raus (→ 2:38)",
+      "Hook experimentieren: Wann reinschneiden, wie viele Schläge"
+    ], note: "GEMEINSAM: Nebeneinander sitzen, verschiedene Versionen kappen, Zusammenhänge im Gesamtbild prüfen." },
+  ]},
+  { date: "20.04.", day: "So", files: [
+    { name: "Johnny — Auf Technik fokussieren", fullname: "1304 Training SF — Johnny Auf Technik fokussieren statt auf Ergebnis", type: "Training", status: "lual", dreh: "Dreh 22.3.", feedback: [
+      "Ersten Schlag rausschneiden (Aufreger in ersten 3 Sek.)",
+      "1:06–1:23 rausschneiden (nach 'OK')",
+      "2:04–2:11 rausschneiden (Beispiel mit Kind bis 'Vorwurf hier')"
+    ], note: "GEMEINSAM: Erst Feedback umsetzen, dann im Live-Review weitere Stellen kürzen." },
+    { name: "3 Tipps gegen Schwächere", fullname: "1404 Tipp SF — 3 Tipps damit du nie wieder gegen schwächere Gegner verlierst", type: "Tipp", status: "review", dreh: "Dreh 29.3.", feedback: [
+      "Hook: Optional minimal länger vorne (keine Präferenz)",
+      "Overlays prüfen — hatte das Video null Overlays?"
+    ], note: "Alleine. Nur optional/kleine Punkte." },
+  ]},
+  { date: "21.04.", day: "Di", files: [
+    { name: "Bester Tipp konstanter Ballwurf", fullname: "1504 Tipp SF — Bester Tipp für einen konstanten Ballwurf", type: "Tipp", status: "ready", dreh: "Review 10.04.", feedback: [] },
+    { name: "Return-Beinarbeit der Profis", fullname: "1604 Tipp SF — Return-Beinarbeit der Profis", type: "Tipp", status: "review", dreh: "Dreh 29.3.", feedback: [
+      "Hook: Deutlich früher beginnen — man muss sehen dass es ein Return ist",
+      "Color Grading Bug fixen"
+    ], note: "Alleine. Dann Lual drübergucken." },
+  ]},
+  { date: "22.04.", day: "Mi", files: [
+    { name: "Mehr Power in die Vorhand", fullname: "1704 Tipp SF — Mehr Power in die Vorhand", type: "Tipp", status: "fix", dreh: "Review 10.04.", feedback: [
+      "Overlay bei 0:13: Ca. 1 Sekunde SPÄTER reinhauen — kommt aktuell zu früh",
+      "Overlay parallele Schultern: Darstellung ändern — statt den Strich durch beide Schultern zu zeichnen → beide Schultern einzeln einkreisen oder andere Darstellung finden. Ziel: maximal wenig verwirrend, der Strich durch die Schultern ist missverständlich"
+    ] },
+    { name: "Mit Konzept angreifen", fullname: "1804 Training SF — Mit Konzept angreifen", type: "Training", status: "ready", dreh: "Review 10.04.", feedback: [] },
+  ]},
+  { date: "23.04.", day: "Do", files: [
+    { name: "Ballwurf mit Marco", fullname: "1904 Training SF — Ballwurf mit Marco", type: "Training", status: "lual", dreh: "—", feedback: [], note: "⚠️ Kein Feedback im Review vorhanden. Muss mit Lual besprochen werden." },
+    { name: "5 Schritte Aufschlag-Treffpunkt", fullname: "2004 Tipp SF — 5 Schritte um den Aufschlag-Treffpunkt zu fixen", type: "Tipp", status: "fix", dreh: "Review 10.04.", feedback: [
+      "Hook früher starten — gleiches Format wie andere Videos"
+    ] },
+  ]},
+  { date: "24.04.", day: "Fr", files: [
+    { name: "Johnny — Mythos Ball im Steigen", fullname: "2104 Training SF — Johnny Mythos Ball im Steigen nehmen", type: "Training", status: "lual", dreh: "Dreh 22.3.", feedback: [
+      "Detaillierte Schnitt-Bewertung: Grün 2:31, Orange 20s, Gelb 34s, Ende 17s (Sonderfall)",
+      "Erster Schlag am Ende raus (verkackt + zu weit rechts) — Alternative finden oder schneiden",
+      "Nur Grün = 2:41 → Platz für ein paar Orange-Szenen (~19s Budget), Gelb komplett raus"
+    ], note: "GEMEINSAM: Gezielt überlegen welche 1–2 Orange-Stellen den Content stärken." },
+    { name: "Vorhand locker spielen", fullname: "2204 Tipp SF — Vorhand locker spielen", type: "Tipp", status: "ready", dreh: "Review 10.04.", feedback: [] },
+  ]},
+  { date: "25.04.", day: "Sa", files: [
+    { name: "5 Tipps perfekter Ballwurf", fullname: "2304 Tipp SF — 5 Tipps für den perfekten Ballwurf", type: "Tipp", status: "ready", dreh: "Review 10.04.", feedback: [] },
+    { name: "Schmetterlball Masterclass", fullname: "2404 Tipp SF — Schmetterlball Masterclass", type: "Tipp", status: "review", dreh: "Dreh 29.3.", feedback: [
+      "Erstes Overlay: Weniger gestaged wirken lassen — Lual harrt am Ende noch ~0,2s aus. Optionen: A) 0,2s am Ende wegschneiden, B) Einfrieren danach langsamer machen, C) Slow Motion. Ziel: weniger gestaged",
+      "Negativ-Overlay bei 14:20: Länger einblenden — zeigt Spieler die Schmetterbälle probieren wo Ball zu tief ist. Entweder etwas früher starten oder etwas länger laufen lassen. Man braucht mehr Zeit um zu verstehen was passiert",
+      "Letztes Overlay (Kreuzschritte): 0,1s früher cutten — sodass man nicht sieht wie Lual die Hände schon runter tut. Weniger gestaged"
+    ], note: "Alleine. Overlay-Timing-Fixes. Generell: Overlay-Längen-Analyse machen (Bjarne vs. Thilo)." },
+  ]},
+  { date: "26.04.", day: "So", files: [
+    { name: "Power in den Topspin Vorhand", fullname: "2504 Tipp SF — Power in den Topspin Vorhand", type: "Tipp", status: "fix", dreh: "Review 10.04.", feedback: [
+      "Outro-CTA austauschen: 'Folgt meinem Kanal' → 'Folgen — wir bringen Tennis aufs nächste Level' (o.ä.)"
+    ] },
+    { name: "Vincent — Aufschlag Treffpunkt", fullname: "2604 Training SF — Vincent Aufschlag Treffpunkt korrigieren", type: "Training", status: "lual", dreh: "Dreh 15.3.", feedback: [
+      "Pause bei 1:22 (Timeline 3:30) rausschneiden (+ komischer Blick)",
+      "Detaillierte Schnitt-Bewertung: Selbst nur Grün = 3:51 — über 3:00 IG-Limit!",
+      "Realistisch: Erfolg bei 5:34 weit vorziehen, ganzen Mittelteil raushauen (→ 2:49)"
+    ], note: "GEMEINSAM: Nebeneinander sitzen, aggressive Kürzung nötig." },
+  ]},
+  { date: "27.04.", day: "Mo", files: [
+    { name: "Return Masterclass mit Theo", fullname: "2704 Training SF — Return Masterclass mit Theo", type: "Training", status: "fix", dreh: "Review 10.04.", feedback: [
+      "Hook 1 Sekunde früher starten"
+    ] },
+    { name: "80% aus dem Arm", fullname: "2804 Tipp SF — 80 Prozent des Aufschlags kommt aus dem Arm", type: "Tipp", status: "fix", dreh: "Review 10.04.", feedback: [
+      "Hook evtl. 0,5 Sek. früher (Thilo entscheidet)",
+      "Sauberer Cut bei ca. 0:54 — nach 'zeigen es euch nochmal' direkt wegcutten"
+    ] },
+  ]},
+  { date: "28.04.", day: "Di", files: [
+    { name: "Johnny — Intensität in den Beinen", fullname: "2904 Training SF — Johnny Intensität in den Beinen", type: "Training", status: "lual", dreh: "Dreh 22.3.", feedback: [
+      "Intro kürzen: Nur ersten Schlag → Kreuz → Cut",
+      "13:50–14:00 rausschneiden",
+      "Detaillierte Bewertung: Rot (43s) komplett raus, Verbesserung 2 (30s) = Entscheidung offen",
+      "Selbst mit ALLEM außer Rot = 2:51 → unter 3:00 IG-Limit, Spielraum vorhanden"
+    ], note: "GEMEINSAM: Verbesserung 2 rein oder raus ist rein inhaltliche Entscheidung." },
+    { name: "Drei-Höhen-Prinzip", fullname: "3004 Tipp SF — Drei-Höhen-Prinzip", type: "Tipp", status: "review", dreh: "Dreh 29.3.", feedback: [
+      "Overlay bei 6:31: Erstes Overlay des Videos — ploppt sehr kurz auf und ist wieder weg. Problem: Lual dreht sich zu früh um. Wenn man es ein bisschen länger hinbekommt → länger einblenden. Prüfen ob das Material es hergibt",
+      "Overlay bei 7:33: Optional etwas länger — nicht wirklich falsch, aber auch etwas zu kurz wahrscheinlich. Thilo ist frei, vielleicht ist es auch schon das Beste so. Nicht dogmatisch ändern, nur gucken ob es besser geht"
+    ], note: "Alleine. Optional, nicht dogmatisch." },
+  ]},
+  { date: "29.04.", day: "Mi", files: [
+    { name: "20 km/h mehr Power", fullname: "3104 Tipp SF — 20 kmh mehr Power in den Aufschlag", type: "Tipp", status: "fix", dreh: "Review 10.04.", feedback: [
+      "Overlay bei 0:18: 0,1 Sek. früher cutten — man sieht Lual schon aus den Knien gehen"
+    ] },
+    { name: "Return Masterclass (Tipp)", fullname: "3204 Tipp SF — Return Masterclass", type: "Tipp", status: "review", dreh: "Dreh 29.3.", feedback: [
+      "Griff-Overlay KOMPLETT NEU anordnen — komplett lösen von aktueller Platzierung und Länge. Neu überlegen: Wo einsetzen, mit welcher Länge, um den Griff optimal zu erklären. Problem aktuell: Overlay wird gezeigt wenn Lual sagt 'man klatscht linke Hand dazu' — dabei wird die rechte Hand gezeigt. Das ist ein Missverständnis und muss korrigiert werden",
+      "Overlay bei 4:44: FALSCHE STELLE — ~20 Sek. nach hinten verschieben (zu ca. 5:06–5:07). Aktuell bei 'zu weit hinten treffen' platziert, soll aber verkörpern dass wir trotzdem sauber ausschwenken — gehört zum letzten Tipp wo Lual sagt 'verkürzte Ausholbewegung und trotzdem sauber ausschwenken'. Slow Motion oder normal — wie es besser gefällt"
+    ], note: "Alleine. Overlay-Arbeit, klar definiert." },
+  ]},
+  { date: "30.04.", day: "Do", files: [
+    { name: "Schmetterball mit Marco", fullname: "3304 Training SF — Schmetterball mit Marco", type: "Training", status: "lual", dreh: "—", feedback: [], note: "⚠️ Kein Feedback im Review vorhanden. Muss mit Lual besprochen werden." },
+    { name: "Angriffsball Masterclass", fullname: "3404 Tipp SF — Angriffsball Masterclass", type: "Tipp", status: "review", dreh: "Dreh 29.3.", feedback: [
+      "Overlay 1 und Overlay 3 TAUSCHEN: Das aktuell dritte Overlay ('es ist wichtig dass du anfängst die Länge rauszunehmen') müsste das ERSTE sein — es symbolisiert dass man weit im Feld drauf hauen kann. Das aktuell erste müsste das dritte sein",
+      "Overlay-Längen generell prüfen — einige minimal zu lang, man sieht Lual sich schon wegdrehen. Optional früher starten damit weniger hektisch",
+      "Overlay bei 10:39: Paar Sekunden NACH HINTEN verschieben — zur Stelle wo Lual sagt dass das Aus sehr nah dran ist. Hat dann mehr Wirkung weil man direkt bildlich sieht warum",
+      "CTA: Minimal mehr Vorlauf, weniger aggressiv rein cutten — man erschreckt sich fast. Am Ende muss man nicht mehr so auf Watchtime achten. Generell als SOP-Regel überlegen"
+    ], note: "Alleine. Overlay-Reordering + CTA-Timing." },
+  ]},
+  { date: "01.05.", day: "Fr", files: [
+    { name: "Johnny — Angriffsbälle", fullname: "0105 Training SF — Johnny Angriffsbälle", type: "Training", status: "lual", dreh: "Dreh 22.3.", feedback: [
+      "Hook: Erste halbe Sek. kürzen + zweiter Schlag schneller",
+      "ZWEI Hook-Versionen: Version A (2 Kreuze) + Version B (1 Kreuz)",
+      "Detaillierte Bewertung: Grün allein = 3:00 + Hook (~5s) = 3:05 → ÜBER IG-Limit!",
+      "Rot (15s) komplett raus. Kein Platz für Orange oder Gelb",
+      "Sogar aus Grün-Abschnitten noch Sekunden rausholen ODER anderes Format (YouTube)"
+    ], note: "GEMEINSAM: Format-Entscheidung (IG Reel vs. YouTube) ist ausschlaggebend." },
+    { name: "Aufschlag Training spannend", fullname: "0205 Tipp SF — Aufschlag Training endlich wieder spannend machen", type: "Tipp", status: "ready", dreh: "Review 10.04.", feedback: [] },
+  ]},
+  { date: "02.05.", day: "Sa", files: [
+    { name: "Mondball-Training", fullname: "0305 Training SF — Mondball-Training mit Joel und Theo", type: "Training", status: "ready", dreh: "Review 10.04.", feedback: [] },
+    { name: "Winkelhalbierende", fullname: "0405 Training SF — Winkelhalbierende mit Joel und Theo", type: "Training", status: "ready", dreh: "Review 10.04.", feedback: [] },
+  ]},
+];
+
+const plan = document.getElementById("plan");
+let currentFilter = 'all';
+
+// localStorage für Checkbox-State
+const STORAGE_KEY = 'upload-plan-checks';
+function loadChecks() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+function saveChecks(checks) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(checks));
+}
+function getCheckKey(di, fi, fbIdx) { return `${di}-${fi}-${fbIdx}`; }
+
+function getVideoProgress(di, fi, f) {
+  if (f.feedback.length === 0) return { done: 0, total: 0 };
+  const checks = loadChecks();
+  let done = 0;
+  f.feedback.forEach((_, fbIdx) => {
+    if (checks[getCheckKey(di, fi, fbIdx)]) done++;
+  });
+  return { done, total: f.feedback.length };
+}
+
+function copyName(btn, text) {
+  navigator.clipboard.writeText(text);
+  btn.classList.add('copied');
+  btn.textContent = '✓';
+  showToast('Kopiert: ' + text);
+  setTimeout(() => { btn.classList.remove('copied'); btn.textContent = 'kopieren'; }, 2000);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function toggleCheck(di, fi, fbIdx) {
+  const checks = loadChecks();
+  const key = getCheckKey(di, fi, fbIdx);
+  checks[key] = !checks[key];
+  saveChecks(checks);
+  render(currentFilter);
+}
+
+function render(filter) {
+  currentFilter = filter;
+  plan.innerHTML = '';
+  const checks = loadChecks();
+
+  // Zähle globalen Fortschritt
+  let totalTasks = 0, doneTasks = 0;
+  data.forEach((day, di) => {
+    day.files.forEach((f, fi) => {
+      f.feedback.forEach((_, fbIdx) => {
+        totalTasks++;
+        if (checks[getCheckKey(di, fi, fbIdx)]) doneTasks++;
+      });
+    });
+  });
+
+  data.forEach((day, di) => {
+    const filteredFiles = day.files.filter(f => {
+      if (filter === 'all') return true;
+      if (filter === 'overdue') return day.overdue || day.today;
+      return f.status === filter;
+    });
+    if (filteredFiles.length === 0) return;
+
+    const div = document.createElement("div");
+    div.className = "day";
+    let label = `Tag ${di+1} — ${day.day} ${day.date}`;
+    let extra = '';
+    if (day.overdue) extra = '<span class="overdue">ÜBERFÄLLIG</span>';
+    if (day.today) extra = '<span class="today-tag">HEUTE</span>';
+    div.innerHTML = `<div class="day-label">${label} ${extra}</div>`;
+
+    filteredFiles.forEach((f, fi) => {
+      // fi muss der Original-Index sein, nicht der gefilterte
+      const origFi = day.files.indexOf(f);
+      const tagClass = f.type === "Tipp" ? "tag-tipp" : f.type === "Training" ? "tag-training" : "tag-reaction";
+      const statusMap = {
+        ready: { cls: "status-ready", label: "✅ FERTIG", row: "is-ready" },
+        fix: { cls: "status-fix", label: "🔧 FIX", row: "is-fix" },
+        review: { cls: "status-review", label: "✂️ SCHNEIDEN", row: "is-review" },
+        lual: { cls: "status-lual", label: "👥 MIT LUAL", row: "is-lual" },
+      };
+      const st = statusMap[f.status];
+      const hasDetails = f.feedback.length > 0 || f.note;
+      const rowId = `row-${di}-${origFi}`;
+      const prog = getVideoProgress(di, origFi, f);
+
+      let badgeHtml = '';
+      if (prog.total > 0) {
+        if (prog.done === prog.total) {
+          badgeHtml = `<span class="badge badge-done">${prog.done}/${prog.total}</span>`;
+        } else if (prog.done > 0) {
+          badgeHtml = `<span class="badge badge-progress">${prog.done}/${prog.total}</span>`;
+        } else {
+          badgeHtml = `<span class="badge" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.25)">${prog.done}/${prog.total}</span>`;
+        }
+      }
+
+      const row = document.createElement("div");
+      row.className = `row ${st.row} ${hasDetails ? '' : 'no-details'}`;
+      row.id = rowId;
+      const safeName = f.fullname.replace(/'/g, "\\'");
+      row.innerHTML = `
+        <span class="expand-icon">▸</span>
+        <span class="status ${st.cls}">${st.label}</span>
+        <span class="filename">${f.name}${badgeHtml}</span>
+        <span class="tag ${tagClass}">${f.type}</span>
+        <button class="copy-btn" onclick="event.stopPropagation(); copyName(this, '${safeName}')">kopieren</button>
+      `;
+      if (hasDetails) {
+        row.onclick = () => toggleDetail(rowId);
+      }
+      div.appendChild(row);
+
+      if (hasDetails) {
+        const detail = document.createElement("div");
+        detail.className = `detail ${st.row}`;
+        detail.id = `detail-${di}-${origFi}`;
+        let html = '';
+        if (f.dreh && f.dreh !== '—') html += `<div class="dreh-info">Quelle: ${f.dreh}</div>`;
+        if (f.feedback.length > 0) {
+          // Mini-Fortschrittsbalken
+          const pct = prog.total > 0 ? Math.round(prog.done / prog.total * 100) : 0;
+          html += `<div class="progress-mini">
+            <div class="progress-mini-bar"><div class="progress-mini-fill" style="width:${pct}%"></div></div>
+            <span class="progress-mini-label">${prog.done}/${prog.total} erledigt</span>
+          </div>`;
+          html += '<h4>Feedback / Änderungen</h4><ul>';
+          f.feedback.forEach((fb, fbIdx) => {
+            const isChecked = checks[getCheckKey(di, origFi, fbIdx)];
+            html += `<li class="${isChecked ? 'checked' : ''}" onclick="event.stopPropagation(); toggleCheck(${di}, ${origFi}, ${fbIdx})">
+              <span class="cb"></span>
+              <span class="cb-text">${fb}</span>
+            </li>`;
+          });
+          html += '</ul>';
+        }
+        if (f.note) html += `<div class="note">${f.note}</div>`;
+        detail.innerHTML = html;
+        div.appendChild(detail);
+      }
+    });
+    plan.appendChild(div);
+  });
+
+  // Globalen Fortschritt in Subtitle updaten
+  const subEl = document.querySelector('.sub');
+  if (totalTasks > 0) {
+    const pct = Math.round(doneTasks / totalTasks * 100);
+    subEl.textContent = `14.04.–02.05.2026 · Review vom 04.04. + 10.04. · ${doneTasks}/${totalTasks} To-Dos erledigt (${pct}%)`;
+  }
+
+  // Offene Detail-Panels wiederherstellen
+  document.querySelectorAll('.row.expanded').forEach(r => {
+    const d = document.getElementById(r.id.replace('row-', 'detail-'));
+    if (d) d.classList.add('open');
+  });
+}
+
+// Expanded-State merken
+const expandedSet = new Set();
+function toggleDetail(rowId) {
+  const row = document.getElementById(rowId);
+  const detail = document.getElementById(rowId.replace('row-', 'detail-'));
+  if (!detail) return;
+  const isExpanding = !row.classList.contains('expanded');
+  row.classList.toggle('expanded');
+  detail.classList.toggle('open');
+  if (isExpanding) expandedSet.add(rowId); else expandedSet.delete(rowId);
+}
+
+function restoreExpanded() {
+  expandedSet.forEach(rowId => {
+    const row = document.getElementById(rowId);
+    const detail = document.getElementById(rowId.replace('row-', 'detail-'));
+    if (row && detail) {
+      row.classList.add('expanded');
+      detail.classList.add('open');
+    }
+  });
+}
+
+const origRender = render;
+render = function(filter) {
+  origRender(filter);
+  restoreExpanded();
+};
+
+function filterBy(f) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+
+  if (f === 'all') {
+    document.querySelectorAll('.filter-btn')[0].classList.add('active');
+  } else if (f === 'overdue') {
+    document.querySelectorAll('.filter-btn')[5].classList.add('active');
+  } else {
+    const idx = { ready: 1, fix: 2, review: 3, lual: 4 }[f];
+    document.querySelectorAll('.filter-btn')[idx].classList.add('active');
+    const cardIdx = { ready: 0, fix: 1, review: 2, lual: 3 }[f];
+    document.querySelectorAll('.card')[cardIdx].classList.add('active');
+  }
+  render(f);
+}
+
+render('all');
+</script>
+</body>
+</html>

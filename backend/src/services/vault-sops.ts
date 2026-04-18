@@ -39,7 +39,7 @@ export function parseSOPDetail(content: string): SOPDetail {
 }
 
 export async function getWorkspaces(): Promise<Workspace[]> {
-  const basePath = join(CONFIG.vaultPath, "4- Workspaces");
+  const basePath = join(CONFIG.vaultPath, "1 - Workspaces");
   const entries = await readdir(basePath, { withFileTypes: true });
 
   const workspaces: Workspace[] = [];
@@ -63,13 +63,13 @@ export async function getWorkspaces(): Promise<Workspace[]> {
 }
 
 export async function getSOPsForWorkspace(workspace: string): Promise<SOPSummary[]> {
-  const sopDir = join(CONFIG.vaultPath, "4- Workspaces", workspace, "01_SOPs");
+  const sopDir = join(CONFIG.vaultPath, "1 - Workspaces", workspace, "01_SOPs");
   const files = (await readdir(sopDir)).filter((f) => f.endsWith(".md"));
 
   const summaries: SOPSummary[] = [];
   for (const file of files) {
     const filePath = join(sopDir, file);
-    const content = await readFile(filePath, "utf-8");
+    const content = (await readFile(filePath, "utf-8")).replace(/\r/g, "");
     const detail = parseSOPDetail(content);
     const stats = await stat(filePath);
     summaries.push({
@@ -84,7 +84,7 @@ export async function getSOPsForWorkspace(workspace: string): Promise<SOPSummary
 }
 
 export async function getSOPDetail(workspace: string, sopFile: string): Promise<SOPDetail> {
-  const filePath = join(CONFIG.vaultPath, "4- Workspaces", workspace, "01_SOPs", sopFile);
-  const content = await readFile(filePath, "utf-8");
+  const filePath = join(CONFIG.vaultPath, "1 - Workspaces", workspace, "01_SOPs", sopFile);
+  const content = (await readFile(filePath, "utf-8")).replace(/\r/g, "");
   return parseSOPDetail(content);
 }
