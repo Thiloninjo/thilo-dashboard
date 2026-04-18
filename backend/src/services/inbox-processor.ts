@@ -71,37 +71,37 @@ const KEYWORD_RULES: KeywordRule[] = [
   {
     type: "task",
     patterns: [
-      /^(neue aufgabe|task|todo|to do|to-do|aufgabe|reminder)[:\s]/i,
-      /^(nicht vergessen|denk dran|erinner mich)[:\s]/i,
-      /^(setz auf die liste|pack auf die liste)[:\s]/i,
+      /\b(neue aufgabe|neuer task|neues todo|neues to do|neue to-do)[:\s]/i,
+      /\b(nicht vergessen|denk dran|erinner mich)[:\s]/i,
+      /\b(setz auf die liste|pack auf die liste)[:\s]/i,
     ],
   },
   {
     type: "calendar",
     patterns: [
-      /^(neuer termin|termin|kalendereintrag|kalender eintrag)[:\s]/i,
-      /^(trag in den kalender|mach.{0,10}kalendereintrag)/i,
+      /\b(neuer termin|kalendereintrag|kalender eintrag)[:\s]/i,
+      /\b(trag in den kalender|mach.{0,10}kalendereintrag)/i,
     ],
   },
   {
     type: "complete",
     patterns: [
-      /^(erledigt|fertig|done|abgehakt|gecheckt)[:\s]/i,
-      /^hab .{2,30} (gemacht|genommen|erledigt|geschafft)/i,
+      /\b(erledigt|fertig|done|abgehakt|gecheckt)[:\s]/i,
+      /\bhab .{2,30} (gemacht|genommen|erledigt|geschafft)/i,
     ],
   },
   {
     type: "delete",
     patterns: [
-      /^(lösch|loesch|lösche|entfern|cancel|streich|nimm raus)[:\s]/i,
-      /^(absagen|canceln|stornieren)[:\s]/i,
+      /\b(lösch|loesch|lösche|entfern|cancel|streich|nimm raus)[:\s]/i,
+      /\b(absagen|canceln|stornieren)[:\s]/i,
     ],
   },
   {
     type: "sop",
     patterns: [
-      /^(sop|s\.o\.p\.?|es o pe|sop eintrag|sop.update|in die checkliste)[:\s]/i,
-      /^(trag in die sop|pack in die sop|merk dir f[uü]r die sop)/i,
+      /\b(sop|s\.o\.p\.?|es o pe|sop eintrag|sop.update|in die checkliste)[:\s]/i,
+      /\b(trag in die sop|pack in die sop|merk dir f[uü]r die sop)/i,
     ],
   },
 ];
@@ -149,10 +149,11 @@ function extractDate(text: string): string {
   return TODAY();
 }
 
-// Strip the keyword prefix from text to get clean title
-function stripPrefix(text: string): string {
+// Strip the keyword trigger from text to get clean title (works anywhere in text)
+function stripTrigger(text: string): string {
+  const triggers = /\b(neue aufgabe|neuer task|neues todo|neues to do|neue to-do|neuer termin|kalendereintrag|kalender eintrag|trag in den kalender|erledigt|fertig|done|abgehakt|gecheckt|lösch|loesch|lösche|entfern|cancel|streich|nimm raus|absagen|canceln|stornieren|sop|s\.o\.p\.?|es o pe|sop eintrag|sop.update|in die checkliste|trag in die sop|pack in die sop|nicht vergessen|denk dran|erinner mich|setz auf die liste|pack auf die liste|hab )[:\s]*/gi;
   return text
-    .replace(/^(neue aufgabe|neuer termin|task|todo|to do|to-do|aufgabe|reminder|termin|kalendereintrag|erledigt|fertig|done|abgehakt|gecheckt|lösch|loesch|lösche|entfern|cancel|streich|nimm raus|absagen|canceln|stornieren|sop|s\.o\.p\.?|es o pe|sop eintrag|sop.update|in die checkliste|trag in die sop|pack in die sop|nicht vergessen|denk dran|erinner mich|setz auf die liste|pack auf die liste|trag in den kalender|hab )[:\s]*/i, "")
+    .replace(triggers, " ")
     .replace(/\s*(um \d{1,2}[\s:]?\d{0,2}\s*(?:uhr)?|morgen|übermorgen|uebermorgen|heute)\s*/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -164,7 +165,7 @@ function detectKeywordIntent(text: string): Intent[] | null {
   for (const rule of KEYWORD_RULES) {
     for (const pattern of rule.patterns) {
       if (pattern.test(lower)) {
-        const title = stripPrefix(text) || text;
+        const title = stripTrigger(text) || text;
         const intent: Intent = {
           type: rule.type,
           title,
