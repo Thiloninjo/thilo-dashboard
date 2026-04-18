@@ -88,7 +88,6 @@ const KEYWORD_RULES: KeywordRule[] = [
     patterns: [
       /^(erledigt|fertig|done|abgehakt|gecheckt)[:\s]/i,
       /^hab .{2,30} (gemacht|genommen|erledigt|geschafft)/i,
-      /^(kreatin|planks|gym|stretching|cold shower|kalt geduscht|meditation|journal)/i,
     ],
   },
   {
