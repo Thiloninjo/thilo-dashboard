@@ -53,6 +53,11 @@ function fuzzyMatch(text: string, search: string): boolean {
   // Exact match
   if (normText === normSearch) return true;
 
+  // Substring match (handles German compound words: "tennisdreh" contains "tennis dreh" logic)
+  const textNoSpaces = normText.replace(/\s/g, "");
+  const searchNoSpaces = normSearch.replace(/\s/g, "");
+  if (textNoSpaces.includes(searchNoSpaces) || searchNoSpaces.includes(textNoSpaces)) return true;
+
   // Check if all search words appear as word boundaries in text
   const searchWords = normSearch.split(" ").filter(w => w.length > 1);
   if (searchWords.length === 0) return false;
