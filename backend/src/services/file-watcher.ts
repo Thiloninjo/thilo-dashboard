@@ -103,3 +103,7 @@ export function startFileWatcher(server: import("http").Server): void {
 export function broadcastApiUpdate(source: "calendar" | "todoist" | "habitica"): void {
   broadcast({ type: "api-updated", source });
 }
+
+export function broadcastVaultChanged(filePath: string): void {
+  broadcast({ type: "vault-changed", file: filePath, priority: "high" });
+}

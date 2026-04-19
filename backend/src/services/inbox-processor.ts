@@ -6,7 +6,7 @@ import { getAllHabitsWithStatus, scoreHabit } from "./habits.js";
 import { getTodayEvents } from "./google-calendar.js";
 import { getTodayTasks } from "./todoist.js";
 import { cacheSet } from "../cache.js";
-import { broadcastApiUpdate } from "./file-watcher.js";
+import { broadcastApiUpdate, broadcastVaultChanged } from "./file-watcher.js";
 
 // Simple dedup: ignore identical messages within 60 seconds
 const recentMessages = new Map<string, number>(); // text → timestamp
@@ -730,8 +730,13 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
   }
   if (successTypes.has("sop") || successTypes.has("sop_hint")) {
     try {
-      broadcastApiUpdate("vault-changed");
-      console.log("[Inbox] SOP broadcast triggered");
+      // Find the SOP file path from the intents to broadcast the correct vault-changed event
+      const sopIntent = results.find(r => r.success && (r.intent.type === "sop" || r.intent.type === "sop_hint"));
+      if (sopIntent?.intent.sopWorkspace && sopIntent?.intent.sopFile) {
+        const sopPath = `1 - Workspaces/${sopIntent.intent.sopWorkspace}/01_SOPs/${sopIntent.intent.sopFile}`;
+        broadcastVaultChanged(sopPath);
+        console.log(`[Inbox] SOP broadcast triggered: ${sopPath}`);
+      }
     } catch {}
   }
 
