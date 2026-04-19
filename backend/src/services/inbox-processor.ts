@@ -255,7 +255,10 @@ task: "neue aufgabe", "neuer task", "neues todo", "nicht vergessen", "denk dran"
 calendar: "neuer termin", "termin um", "kalendereintrag", "trag in den kalender"
 complete: "erledigt", "fertig", "done", "abgehakt", "gemacht", "genommen", "geschafft"
 delete: "lösch", "streich", "cancel", "absagen", "fällt aus", "gecancelt", "abgesagt"
-sop_hint: "sop", "s.o.p."
+sop: "sop", "s.o.p.", "sop eintrag", "trag in die sop", "pack in die sop"
+  → Wenn der User EXPLIZIT "SOP" sagt = type "sop" (geht in Ausarbeitungs-Queue)
+sop_hint: NUR wenn etwas wie ein Learning/Best Practice klingt, aber der User NICHT "SOP" gesagt hat
+  → Das kommt nur vor wenn ein anderer Trigger (z.B. "beim dreh") vorhanden ist. Im Zweifel: "sop" wenn "SOP" im Text steht.
 
 ## VERSCHIEBE-LOGIK (Trigger: "verschoben", "verlegt", "statt", "geändert auf")
 
@@ -281,11 +284,23 @@ JSON-Array. NUR JSON, kein anderer Text.
 - "date": Wenn kein Datum → heute (${today})
 - "time": Nur wenn Uhrzeit genannt
 - "searchTerm": Bei complete/delete — der Name zum Suchen
-- Bei sop_hint: zusaetzlich "sopWorkspace" und "sopFile"
+- Bei sop/sop_hint: zusaetzlich "sopWorkspace" und "sopFile"
 
-SOP-Zuordnung:
-Workspace "Tennis-Ring-Lual": "Dreh Learnings.md", "Longform SOP.md", "Tippvideo SOP.md", "Trainingsvideo SOP.md", "Studio-Video SOP.md", "Quality Control SOP.md"
-Workspace "Cavy": "Filming SOP.md", "Vlog Editing SOP.md"`
+SOP-Zuordnung (waehle die passendste Datei basierend auf dem Inhalt):
+Workspace "Tennis-Ring-Lual":
+  - "Dreh Learnings.md" — Allgemeine Dreh-Learnings, Equipment, Kamera, Licht, Vorbereitung
+  - "Longform SOP.md" — Long Form Content, YouTube Videos, Hooks
+  - "Tippvideo SOP.md" — Tennis-Tippvideos
+  - "Trainingsvideo SOP.md" — Tennis-Trainingsvideos
+  - "Studio-Video SOP.md" — Studio-Aufnahmen
+  - "Editing SOP.md" — Schnitt, Post-Production fuer Tennis
+  - "Quality Control SOP.md" — Qualitaetskontrolle
+Workspace "Cavy":
+  - "Filming SOP.md" — Vlog Filming, M23 Vlogs
+  - "Vlog Editing SOP.md" — Vlog Schnitt
+Workspace "Thilo":
+  - "High-Level Editor.md" — Allgemeine Editor-Skills, Workflow-Optimierung
+  - "SOP Sammlung - Alle Quellen.md" — Uebergreifende Best Practices`
     }],
   });
 
