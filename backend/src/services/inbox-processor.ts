@@ -78,6 +78,7 @@ const KEYWORD_RULES: KeywordRule[] = [
     type: "task",
     patterns: [
       /\b(neue aufgabe|neuer task|neues todo|neues to do|neue to-do)[:\s]/i,
+      /\b(erstell.{0,5} .{0,10}(aufgabe|task|todo))/i,
       /\b(nicht vergessen|denk dran|erinner mich)[:\s]/i,
       /\b(setz auf die liste|pack auf die liste)[:\s]/i,
     ],
@@ -85,8 +86,10 @@ const KEYWORD_RULES: KeywordRule[] = [
   {
     type: "calendar",
     patterns: [
-      /\b(neuer termin|kalendereintrag|kalender eintrag)[:\s]/i,
+      /\b(neuer termin|neuen termin|kalendereintrag|kalender eintrag)[:\s]/i,
       /\b(trag in den kalender|mach.{0,10}kalendereintrag)/i,
+      /\b(erstell.{0,5} .{0,10}termin|mach .{0,5}termin)/i,
+      /\b(termin für|termin um)\b/i,
     ],
   },
   {
@@ -176,8 +179,8 @@ function hasTriggerKeyword(text: string): boolean {
 // These are the ONLY words that allow the AI to assign a non-note intent.
 // If none of these appear in the text, the AI MUST return "note".
 const TRIGGER_WHITELIST = {
-  task: ["neue aufgabe", "neuer task", "neues todo", "neues to do", "neue to-do", "nicht vergessen", "denk dran", "erinner mich", "muss noch", "muss ich noch"],
-  calendar: ["neuer termin", "termin um", "kalendereintrag", "trag in den kalender"],
+  task: ["neue aufgabe", "neuer task", "neues todo", "neues to do", "neue to-do", "erstell eine aufgabe", "erstelle eine aufgabe", "nicht vergessen", "denk dran", "erinner mich", "muss noch", "muss ich noch"],
+  calendar: ["neuer termin", "neuen termin", "erstell einen termin", "erstelle einen termin", "termin um", "termin für", "kalendereintrag", "trag in den kalender", "mach einen termin", "mach mir einen termin"],
   complete: ["erledigt", "fertig", "done", "abgehakt", "gecheckt", "gemacht", "genommen", "geschafft", "habit", "habits"],
   delete: ["lösch", "loesch", "streich", "cancel", "absagen", "canceln", "fällt aus", "faellt aus", "gecancelt", "abgesagt"],
   shift: ["verschoben", "verlegt", "verschiebt", "verschieb", "geändert auf", "geaendert auf", "statt"],
@@ -239,8 +242,8 @@ Eingabe: "${text}"${calendarContext}
 
 ## TRIGGER-WHITELIST (NUR diese Woerter erlauben einen Intent!)
 
-task: "neue aufgabe", "neuer task", "neues todo", "nicht vergessen", "denk dran", "erinner mich", "muss noch", "muss ich noch"
-calendar: "neuer termin", "termin um", "kalendereintrag", "trag in den kalender"
+task: "neue aufgabe", "neuer task", "neues todo", "erstelle eine aufgabe", "nicht vergessen", "denk dran", "erinner mich", "muss noch", "muss ich noch"
+calendar: "neuer termin", "neuen termin", "erstelle einen termin", "termin um", "termin für", "kalendereintrag", "trag in den kalender", "mach einen termin"
 complete: "erledigt", "fertig", "done", "abgehakt", "gemacht", "genommen", "geschafft", "habit", "habits"
 delete: "lösch", "streich", "cancel", "absagen", "fällt aus", "gecancelt", "abgesagt"
 sop: "sop", "s.o.p.", "sop eintrag", "trag in die sop", "pack in die sop"
