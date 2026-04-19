@@ -37,6 +37,7 @@ interface Intent {
   sopWorkspace?: string; // for sop: "Tennis-Ring-Lual" or "Cavy"
   sopFile?: string; // for sop: "Longform SOP.md"
   source?: "keyword" | "ai"; // how the intent was detected
+  originalText?: string; // full input text (for SOP: saved as Handy Note)
 }
 
 // Normalize text for matching — ignore hyphens, spaces, case
@@ -302,6 +303,7 @@ Workspace "Thilo":
       sopWorkspace: json.sopWorkspace || undefined,
       sopFile: json.sopFile || undefined,
       source: "ai" as const,
+      originalText: text,
     }));
   } catch (err) {
     console.error("[Inbox AI] Parse error:", err);
@@ -574,6 +576,25 @@ async function addToSOP(title: string, workspace: string, sopFile: string, hintO
   }
 }
 
+// Save a Handy Note and return the filename
+async function saveHandyNote(text: string): Promise<string | null> {
+  const { join } = await import("path");
+  const { writeFile: wf } = await import("fs/promises");
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }).replace(/\./g, ".");
+  const timeStr = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }).replace(":", "-");
+  const fileName = `Handy Note from ${dateStr}, ${timeStr}.md`;
+  const filePath = join(CONFIG.vaultPath, "2 - Meine Notizen", "Handy Note Dump", fileName);
+
+  try {
+    await wf(filePath, `${text}\n`, "utf-8");
+    return fileName;
+  } catch {
+    return null;
+  }
+}
+
 // === Main Processor ===
 
 export interface InboxResult {
@@ -625,11 +646,17 @@ async function executeIntent(intent: Intent): Promise<{ success: boolean; messag
       if (!intent.sopWorkspace || !intent.sopFile) {
         return { success: false, message: `SOP nicht erkannt fuer: "${intent.title}"` };
       }
-      const result = await addToSOP(intent.title, intent.sopWorkspace, intent.sopFile, false);
+      // 1. Save full text as Handy Note (original source)
+      const noteFileName = await saveHandyNote(intent.originalText || intent.title);
+      // 2. Queue entry with summary + reference to Handy Note
+      const queueTitle = noteFileName
+        ? `${intent.title} (Quelle: ${noteFileName})`
+        : intent.title;
+      const result = await addToSOP(queueTitle, intent.sopWorkspace, intent.sopFile, false);
       return {
         success: result.success,
         message: result.success
-          ? `SOP Queue: "${intent.title}" → ${intent.sopFile}`
+          ? `SOP Queue: "${intent.title}" → ${intent.sopFile}${noteFileName ? ` (Notiz: ${noteFileName})` : ""}`
           : `SOP konnte nicht aktualisiert werden`,
       };
     }
@@ -647,23 +674,13 @@ async function executeIntent(intent: Intent): Promise<{ success: boolean; messag
     }
     case "note":
     default: {
-      // Save note to Vault inbox for later processing via /handy-notes
-      const { join } = await import("path");
-      const { writeFile: wf } = await import("fs/promises");
-
-      const vaultPath = CONFIG.vaultPath;
-      const now = new Date();
-      const dateStr = now.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" }).replace(/\./g, ".");
-      const timeStr = now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }).replace(":", "-");
-      const fileName = `Handy Note from ${dateStr}, ${timeStr}.md`;
-      const filePath = join(vaultPath, "2 - Meine Notizen", "Handy Note Dump", fileName);
-
-      try {
-        await wf(filePath, `${intent.title}\n`, "utf-8");
-        return { success: true, message: `Notiz gespeichert: "${intent.title}"` };
-      } catch {
-        return { success: true, message: `Notiz: "${intent.title}" (nicht gespeichert)` };
-      }
+      const fileName = await saveHandyNote(intent.originalText || intent.title);
+      return {
+        success: true,
+        message: fileName
+          ? `Notiz gespeichert: "${intent.title}"`
+          : `Notiz: "${intent.title}" (nicht gespeichert)`,
+      };
     }
   }
 }
