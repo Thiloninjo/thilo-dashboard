@@ -257,15 +257,15 @@ JSON-Array. NUR JSON, kein anderer Text.
 - "searchTerm": Bei complete/delete — der Name zum Suchen
 - Bei sop/sop_hint: zusaetzlich "sopWorkspace" und "sopFile"
 
-SOP-Zuordnung (waehle die passendste Datei basierend auf dem Inhalt):
+SOP-Zuordnung — waehle aus DIESER LISTE die passendste Datei (KEINE neuen Dateinamen erfinden, nur aus dieser Liste waehlen!):
 Workspace "Tennis-Ring-Lual":
-  - "Tennis Filming SOP.md" — Allgemeine Dreh-Learnings, Equipment, Kamera, Licht, Vorbereitung
+  - "Tennis Filming SOP.md" — Dreh, Equipment, Kamera, Licht, Vorbereitung
+  - "Tennis Editing SOP.md" — Schnitt, Post-Production, Color Grading fuer Tennis
   - "Longform SOP.md" — Long Form Content, YouTube Videos, Hooks
   - "Tippvideo SOP.md" — Tennis-Tippvideos
   - "Trainingsvideo SOP.md" — Tennis-Trainingsvideos
   - "Studio-Video SOP.md" — Studio-Aufnahmen
-  - "Editing SOP.md" — Schnitt, Post-Production fuer Tennis
-  - "Quality Control SOP.md" — Qualitaetskontrolle
+  - "Quality Control SOP.md" — Qualitaetskontrolle, Export
 Workspace "Cavy":
   - "Vlog Filming SOP.md" — Vlog Filming, M23 Vlogs
   - "Vlog Editing SOP.md" — Vlog Schnitt

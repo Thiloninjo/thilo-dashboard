@@ -16,6 +16,8 @@ const SOP_MAP: Record<string, { workspace: string; file: string }> = {
   "Quality Control SOP": { workspace: "Tennis-Ring-Lual", file: "Quality Control SOP.md" },
   "Filming SOP": { workspace: "Cavy", file: "Vlog Filming SOP.md" },
   "Vlog Filming SOP": { workspace: "Cavy", file: "Vlog Filming SOP.md" },
+  "Tennis Editing SOP": { workspace: "Tennis-Ring-Lual", file: "Tennis Editing SOP.md" },
+  "Tennis Editing": { workspace: "Tennis-Ring-Lual", file: "Tennis Editing SOP.md" },
   "Vlog Editing SOP": { workspace: "Cavy", file: "Vlog Editing SOP.md" },
 };
 
