@@ -92,12 +92,14 @@ export function Heute() {
   useEffect(() => {
     fetchAll();
     fetchDrehContext();
-    return onWSMessage((msg) => {
+    // Poll dreh context every 5s (catches calendar changes from Hetzner shortcut)
+    const drehInterval = setInterval(fetchDrehContext, 5_000);
+    const unsub = onWSMessage((msg) => {
       if (msg.type === "vault-changed") fetchAll();
-      // When calendar data changes, also re-check dreh context
       if (msg.type === "api-updated" && msg.source === "calendar") fetchDrehContext();
       if (msg.type === "api-updated" && msg.source) fetchSource(msg.source);
     });
+    return () => { clearInterval(drehInterval); unsub(); };
   }, [fetchAll, fetchSource]);
 
   function handleScore(id: string) {

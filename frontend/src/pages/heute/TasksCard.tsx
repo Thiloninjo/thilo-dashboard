@@ -82,6 +82,9 @@ export function TasksCard({ vaultTasks, todoistTasks, onRefresh, onOpenBoard }: 
     // Optimistic: immediately mark as checked off (visually disappears)
     setCheckedOff((prev) => new Set(prev).add(key));
 
+    // Virtual tasks (dreh-vorabend, dreh-morgen) — just hide locally, no API call
+    if (task.id.startsWith("dreh-")) return;
+
     // Then sync to backend
     try {
       if (task.source === "vault") {

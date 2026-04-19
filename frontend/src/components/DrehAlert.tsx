@@ -15,7 +15,7 @@ export function DrehAlert({ onOpen }: { onOpen: () => void }) {
       .then((r) => setHasDreh(r.data.isDrehToday || r.data.isDrehTomorrow))
       .catch(() => {});
     check();
-    const iv = setInterval(check, 30_000);
+    const iv = setInterval(check, 5_000);
     return () => clearInterval(iv);
   }, []);
 
