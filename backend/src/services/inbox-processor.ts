@@ -186,6 +186,12 @@ function detectKeywordIntent(text: string): Intent[] | null {
           intent.searchTerm = title;
         }
 
+        // SOP needs AI to determine workspace/file — can't do that with keywords alone
+        if (rule.type === "sop") {
+          console.log(`[Inbox Keyword] SOP keyword matched, delegating to AI for workspace/file routing`);
+          return null; // Fall through to AI which handles SOP workspace/file assignment
+        }
+
         console.log(`[Inbox Keyword] Matched: ${rule.type} → "${title}"`);
         return [intent];
       }
