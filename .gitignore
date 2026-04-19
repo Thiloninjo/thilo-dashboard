@@ -2,3 +2,6 @@ node_modules/
 dist/
 .env
 google-token.json
+backend/data/habit-log.json
+backend/data/habits.json
+backend/data/health-data.json
