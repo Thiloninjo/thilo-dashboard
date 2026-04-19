@@ -266,7 +266,7 @@ Workspace "Tennis-Ring-Lual":
   - "Editing SOP.md" — Schnitt, Post-Production fuer Tennis
   - "Quality Control SOP.md" — Qualitaetskontrolle
 Workspace "Cavy":
-  - "Filming SOP.md" — Vlog Filming, M23 Vlogs
+  - "Vlog Filming SOP.md" — Vlog Filming, M23 Vlogs
   - "Vlog Editing SOP.md" — Vlog Schnitt
 Workspace "Thilo":
   - "High-Level Editor.md" — Allgemeine Editor-Skills, Workflow-Optimierung
