@@ -37,7 +37,7 @@ const ttsProvider: TTSProvider = edgeTTS;
 
 export async function generateBriefingText(): Promise<string> {
   // Read the Filming SOP
-  const sopPath = join(CONFIG.vaultPath, "1 - Workspaces", "Tennis-Ring-Lual", "01_SOPs", "Dreh Learnings.md");
+  const sopPath = join(CONFIG.vaultPath, "1 - Workspaces", "Tennis-Ring-Lual", "01_SOPs", "Tennis Filming SOP.md");
   const sopContent = await readFile(sopPath, "utf-8");
 
   // Extract Quick-Check: Morgens items

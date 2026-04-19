@@ -6,8 +6,9 @@ const SOP_COMMIT_REGEX = /^(?:SOP|SOP-Hinweis) (.+?): (.+?) \(Quelle: (.+)\)$/;
 
 // Map SOP names from commits to workspace/file
 const SOP_MAP: Record<string, { workspace: string; file: string }> = {
-  "Dreh Learnings": { workspace: "Tennis-Ring-Lual", file: "Dreh Learnings.md" },
-  "Tennis Filming": { workspace: "Tennis-Ring-Lual", file: "Dreh Learnings.md" },
+  "Dreh Learnings": { workspace: "Tennis-Ring-Lual", file: "Tennis Filming SOP.md" },
+  "Tennis Filming": { workspace: "Tennis-Ring-Lual", file: "Tennis Filming SOP.md" },
+  "Tennis Filming SOP": { workspace: "Tennis-Ring-Lual", file: "Tennis Filming SOP.md" },
   "Longform SOP": { workspace: "Tennis-Ring-Lual", file: "Longform SOP.md" },
   "Tippvideo SOP": { workspace: "Tennis-Ring-Lual", file: "Tippvideo SOP.md" },
   "Trainingsvideo SOP": { workspace: "Tennis-Ring-Lual", file: "Trainingsvideo SOP.md" },

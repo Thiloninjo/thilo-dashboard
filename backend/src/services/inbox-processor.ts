@@ -258,7 +258,7 @@ JSON-Array. NUR JSON, kein anderer Text.
 
 SOP-Zuordnung (waehle die passendste Datei basierend auf dem Inhalt):
 Workspace "Tennis-Ring-Lual":
-  - "Dreh Learnings.md" — Allgemeine Dreh-Learnings, Equipment, Kamera, Licht, Vorbereitung
+  - "Tennis Filming SOP.md" — Allgemeine Dreh-Learnings, Equipment, Kamera, Licht, Vorbereitung
   - "Longform SOP.md" — Long Form Content, YouTube Videos, Hooks
   - "Tippvideo SOP.md" — Tennis-Tippvideos
   - "Trainingsvideo SOP.md" — Tennis-Trainingsvideos
