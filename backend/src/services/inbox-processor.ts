@@ -180,7 +180,7 @@ const TRIGGER_WHITELIST = {
   calendar: ["neuer termin", "termin um", "kalendereintrag", "trag in den kalender"],
   complete: ["erledigt", "fertig", "done", "abgehakt", "gecheckt", "gemacht", "genommen", "geschafft", "habit", "habits"],
   delete: ["lösch", "loesch", "streich", "cancel", "absagen", "canceln", "fällt aus", "faellt aus", "gecancelt", "abgesagt"],
-  shift: ["verschoben", "verlegt", "verschiebt", "geändert auf", "geaendert auf", "statt"],
+  shift: ["verschoben", "verlegt", "verschiebt", "verschieb", "geändert auf", "geaendert auf", "statt"],
   sop: ["sop", "s.o.p", "es o pe", "trag in die sop", "pack in die sop"],
 };
 
@@ -207,6 +207,23 @@ async function detectIntentsAI(text: string): Promise<Intent[]> {
   const today = TODAY();
   const now = NOW_TIME();
 
+  // For shift/reschedule requests, load today's calendar events so AI knows what to move
+  const shiftTriggers = TRIGGER_WHITELIST.shift;
+  const hasShiftTrigger = shiftTriggers.some(t => lower.includes(t)) || /\bvon \d{1,2}[:\s]?\d{0,2}\s*(uhr\s*)?auf \d/i.test(lower);
+  let calendarContext = "";
+  if (hasShiftTrigger) {
+    try {
+      const events = await getTodayEvents();
+      if (events.length > 0) {
+        const eventList = events.map((e: any) => {
+          const start = e.start ? new Date(e.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : "ganztägig";
+          return `- ${start}: "${e.summary}"`;
+        }).join("\n");
+        calendarContext = `\n\n## HEUTIGE TERMINE (fuer Verschiebe-Logik)\n${eventList}\nWenn der User sagt "verschiebe den Termin von X Uhr", finde den Termin der um X Uhr stattfindet und verwende dessen Titel.\n`;
+      }
+    } catch {}
+  }
+
   const response = await anthropic.messages.create({
     model: "claude-sonnet-4-20250514",
     max_tokens: 400,
@@ -218,7 +235,7 @@ Datum: ${today} (${new Date().toLocaleDateString("de-DE", { weekday: "long" })})
 Wochentage: ${(() => { const d = new Date(); const days = []; for (let i = 0; i < 7; i++) { const dd = new Date(d); dd.setDate(d.getDate() + i); days.push(dd.toLocaleDateString("de-DE", { weekday: "long" }) + " = " + dd.getFullYear() + "-" + String(dd.getMonth()+1).padStart(2,"0") + "-" + String(dd.getDate()).padStart(2,"0")); } return days.join(", "); })()}
 Uhrzeit: ${now}
 
-Eingabe: "${text}"
+Eingabe: "${text}"${calendarContext}
 
 ## TRIGGER-WHITELIST (NUR diese Woerter erlauben einen Intent!)
 
@@ -231,13 +248,16 @@ sop: "sop", "s.o.p.", "sop eintrag", "trag in die sop", "pack in die sop"
 sop_hint: NUR wenn etwas wie ein Learning/Best Practice klingt, aber der User NICHT "SOP" gesagt hat
   → Das kommt nur vor wenn ein anderer Trigger (z.B. "beim dreh") vorhanden ist. Im Zweifel: "sop" wenn "SOP" im Text steht.
 
-## VERSCHIEBE-LOGIK (Trigger: "verschoben", "verlegt", "statt", "geändert auf")
+## VERSCHIEBE-LOGIK (Trigger: "verschoben", "verlegt", "statt", "geändert auf", "von X auf Y")
 
 Wenn ein Verschiebe-Trigger vorkommt → ZWEI Intents:
-1. delete (den alten Eintrag)
-2. calendar (den neuen Eintrag mit neuer Zeit/Datum)
+1. delete (den alten Eintrag — searchTerm = Titel des Termins)
+2. calendar (den neuen Eintrag mit neuer Zeit/Datum — gleicher Titel)
 
-Beispiel: "Zahnarzt hat sich auf 16 Uhr verschoben" → [delete Zahnarzt, calendar Zahnarzt 16:00]
+Beispiele:
+- "Zahnarzt hat sich auf 16 Uhr verschoben" → [delete Zahnarzt, calendar Zahnarzt 16:00]
+- "Verschiebe den Termin von 18 auf 18:30" → Finde in HEUTIGE TERMINE welcher Termin um 18:00 stattfindet, verwende dessen Titel fuer delete + calendar
+- "Von 14 Uhr auf 15 Uhr" → Gleich: Termin um 14:00 suchen, Titel uebernehmen
 
 ## ABSOLUTE REGEL
 
