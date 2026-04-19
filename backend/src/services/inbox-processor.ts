@@ -164,41 +164,10 @@ function stripTrigger(text: string): string {
     .trim();
 }
 
-function detectKeywordIntent(text: string): Intent[] | null {
+// Check if text contains any trigger keyword (used to skip AI call when no trigger found)
+function hasTriggerKeyword(text: string): boolean {
   const lower = text.toLowerCase().trim();
-
-  for (const rule of KEYWORD_RULES) {
-    for (const pattern of rule.patterns) {
-      if (pattern.test(lower)) {
-        const title = stripTrigger(text) || text;
-
-        const intent: Intent = {
-          type: rule.type,
-          title,
-          date: extractDate(text),
-          source: "keyword",
-        };
-
-        if (rule.type === "calendar" || rule.type === "task") {
-          intent.time = extractTime(text);
-        }
-        if (rule.type === "complete" || rule.type === "delete") {
-          intent.searchTerm = title;
-        }
-
-        // SOP needs AI to determine workspace/file — can't do that with keywords alone
-        if (rule.type === "sop") {
-          console.log(`[Inbox Keyword] SOP keyword matched, delegating to AI for workspace/file routing`);
-          return null; // Fall through to AI which handles SOP workspace/file assignment
-        }
-
-        console.log(`[Inbox Keyword] Matched: ${rule.type} → "${title}"`);
-        return [intent];
-      }
-    }
-  }
-
-  return null; // No keyword match → fall through to AI
+  return KEYWORD_RULES.some(rule => rule.patterns.some(p => p.test(lower)));
 }
 
 // === PHASE 2: AI with strict trigger whitelist (no freestyle interpretation) ===
@@ -208,7 +177,7 @@ function detectKeywordIntent(text: string): Intent[] | null {
 const TRIGGER_WHITELIST = {
   task: ["neue aufgabe", "neuer task", "neues todo", "neues to do", "neue to-do", "nicht vergessen", "denk dran", "erinner mich", "muss noch", "muss ich noch"],
   calendar: ["neuer termin", "termin um", "kalendereintrag", "trag in den kalender"],
-  complete: ["erledigt", "fertig", "done", "abgehakt", "gecheckt", "gemacht", "genommen", "geschafft"],
+  complete: ["erledigt", "fertig", "done", "abgehakt", "gecheckt", "gemacht", "genommen", "geschafft", "habit", "habits"],
   delete: ["lösch", "loesch", "streich", "cancel", "absagen", "canceln", "fällt aus", "faellt aus", "gecancelt", "abgesagt"],
   shift: ["verschoben", "verlegt", "verschiebt", "geändert auf", "geaendert auf", "statt"],
   sop: ["sop", "s.o.p", "es o pe", "trag in die sop", "pack in die sop"],
@@ -222,12 +191,13 @@ async function detectIntentsAI(text: string): Promise<Intent[]> {
 
   // Pre-check: does the text contain ANY trigger word at all?
   const lower = text.toLowerCase();
-  const hasTrigger = Object.values(TRIGGER_WHITELIST).some(triggers =>
+  const hasTriggerInWhitelist = Object.values(TRIGGER_WHITELIST).some(triggers =>
     triggers.some(t => lower.includes(t))
   );
+  const hasTriggerInKeywords = hasTriggerKeyword(text);
 
-  // No trigger word found → skip AI entirely, save the API call
-  if (!hasTrigger) {
+  // No trigger word found anywhere → skip AI entirely, save the API call
+  if (!hasTriggerInWhitelist && !hasTriggerInKeywords) {
     console.log("[Inbox] No trigger word found → note (AI skipped)");
     return [{ type: "note", title: text, source: "keyword" }];
   }
@@ -237,7 +207,7 @@ async function detectIntentsAI(text: string): Promise<Intent[]> {
   const now = NOW_TIME();
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-20250514",
+    model: "claude-sonnet-4-6-20250627",
     max_tokens: 400,
     messages: [{
       role: "user",
@@ -253,7 +223,7 @@ Eingabe: "${text}"
 
 task: "neue aufgabe", "neuer task", "neues todo", "nicht vergessen", "denk dran", "erinner mich", "muss noch", "muss ich noch"
 calendar: "neuer termin", "termin um", "kalendereintrag", "trag in den kalender"
-complete: "erledigt", "fertig", "done", "abgehakt", "gemacht", "genommen", "geschafft"
+complete: "erledigt", "fertig", "done", "abgehakt", "gemacht", "genommen", "geschafft", "habit", "habits"
 delete: "lösch", "streich", "cancel", "absagen", "fällt aus", "gecancelt", "abgesagt"
 sop: "sop", "s.o.p.", "sop eintrag", "trag in die sop", "pack in die sop"
   → Wenn der User EXPLIZIT "SOP" sagt = type "sop" (geht in Ausarbeitungs-Queue)
@@ -339,15 +309,11 @@ Workspace "Thilo":
   }
 }
 
-// === Combined: Keywords first, then AI ===
+// === Main intent detection ===
+// ALL requests go through AI for clean title formatting.
+// Trigger whitelist pre-check saves API cost when no trigger is present.
 
 async function detectIntents(text: string): Promise<Intent[]> {
-  // Phase 1: Try keyword match (instant, 100% reliable)
-  const keywordResult = detectKeywordIntent(text);
-  if (keywordResult) return keywordResult;
-
-  // Phase 2: AI fallback (conservative, confidence-gated)
-  console.log("[Inbox] No keyword match, using AI fallback");
   return detectIntentsAI(text);
 }
 
