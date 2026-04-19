@@ -207,7 +207,7 @@ async function detectIntentsAI(text: string): Promise<Intent[]> {
   const now = NOW_TIME();
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-6-latest",
+    model: "claude-sonnet-4-20250514",
     max_tokens: 400,
     messages: [{
       role: "user",
