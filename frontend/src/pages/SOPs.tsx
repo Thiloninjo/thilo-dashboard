@@ -116,15 +116,17 @@ export function SOPs() {
   }, []);
 
   useEffect(() => {
-    const fetch = () => apiFetch<CachedResponse<Workspace[]>>("/sops").then((r) => setWorkspaces(r.data)).catch(() => {});
-    fetch();
-    const interval = setInterval(fetch, 10_000);
+    const fetchWorkspaces = () => apiFetch<CachedResponse<Workspace[]>>("/sops").then((r) => setWorkspaces(r.data)).catch(() => {});
+    fetchWorkspaces();
+    const wsInterval = setInterval(fetchWorkspaces, 10_000);
+    // Poll open SOP detail every 5s (catches Hetzner-side changes like inbox SOP entries)
+    const detailInterval = setInterval(refreshDetail, 5_000);
     const unsub = onWSMessage((msg) => {
       if (msg.type === "vault-changed" && msg.file?.includes("01_SOPs")) {
         refreshDetail();
       }
     });
-    return () => { clearInterval(interval); unsub(); };
+    return () => { clearInterval(wsInterval); clearInterval(detailInterval); unsub(); };
   }, [refreshDetail]);
 
   async function openWorkspace(name: string) {
