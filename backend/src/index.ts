@@ -40,6 +40,30 @@ app.use("/api/health-data", healthDataRouter);
 app.use("/api/asana", asanaRouter);
 app.use("/webhooks", webhooksRouter);
 
+// AI-Edge Reports — read from vault
+app.get("/api/ai-edge", async (_req, res) => {
+  try {
+    const { readdir, readFile: rf } = await import("fs/promises");
+    const { join } = await import("path");
+    const dir = join(CONFIG.vaultPath, "3 - Kontext", "Kontext");
+    const files = await readdir(dir);
+    const reports = files
+      .filter((f: string) => f.startsWith("AI-Edge Report") && f.endsWith(".md"))
+      .sort()
+      .reverse();
+    const data = await Promise.all(
+      reports.map(async (f: string) => ({
+        name: f.replace(".md", ""),
+        date: f.match(/\d{4}-\d{2}-\d{2}/)?.[0] || "",
+        content: await rf(join(dir, f), "utf-8"),
+      }))
+    );
+    res.json({ data, lastUpdated: new Date().toISOString(), isStale: false });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load AI-Edge reports" });
+  }
+});
+
 // Serve Streaks PWA as static files
 app.use("/habits", express.static(resolve(import.meta.dirname || __dirname, "../public/habits")));
 app.get("/habits/*", (_req, res) => {
