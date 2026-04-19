@@ -51,8 +51,9 @@ function checkDateReset() {
 healthDataRouter.get("/", async (_req, res) => {
   checkDateReset();
 
-  // If local has no steps, try fetching from server (only use if data is from today)
-  if (healthData.steps === 0) {
+  // Fetch from Hetzner if local data is missing or stale (Auto Export sends to Hetzner, not local)
+  const isStale = Date.now() - new Date(healthData.lastUpdated).getTime() > 60_000; // >1 min old
+  if (healthData.steps === 0 || isStale) {
     try {
       const serverRes = await fetch("https://46-225-160-248.nip.io/api/health-data", {
         headers: { Authorization: "Bearer thilo-dashboard-2026-secret" },
@@ -60,7 +61,7 @@ healthDataRouter.get("/", async (_req, res) => {
       if (serverRes.ok) {
         const serverData = await serverRes.json();
         const today = localToday();
-        if (serverData.data?.steps > 0 && serverData.data?.date === today) {
+        if (serverData.data?.date === today && serverData.data?.steps > healthData.steps) {
           healthData.steps = serverData.data.steps;
           healthData.lastUpdated = serverData.data.lastUpdated;
           persistData();
