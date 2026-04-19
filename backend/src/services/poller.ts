@@ -48,6 +48,18 @@ function connectHetznerWS(): void {
           if (changed) {
             broadcastApiUpdate(msg.source);
           }
+        } else if (msg.type === "vault-pull") {
+          // Hetzner pushed a vault change — pull it locally
+          console.log("[Hetzner WS] vault-pull received — pulling vault...");
+          try {
+            const { simpleGit } = await import("simple-git");
+            const { CONFIG } = await import("../config.js");
+            const git = simpleGit(CONFIG.vaultPath);
+            await git.pull();
+            console.log("[Hetzner WS] Vault pull complete");
+          } catch (err) {
+            console.error("[Hetzner WS] Vault pull failed:", err);
+          }
         }
       } catch {}
     });

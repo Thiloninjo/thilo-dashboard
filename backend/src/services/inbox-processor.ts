@@ -6,7 +6,7 @@ import { getAllHabitsWithStatus, scoreHabit } from "./habits.js";
 import { getTodayEvents } from "./google-calendar.js";
 import { getTodayTasks } from "./todoist.js";
 import { cacheSet } from "../cache.js";
-import { broadcastApiUpdate, broadcastVaultChanged } from "./file-watcher.js";
+import { broadcastApiUpdate, broadcastVaultChanged, broadcastVaultPull } from "./file-watcher.js";
 
 // Simple dedup: ignore identical messages within 60 seconds
 const recentMessages = new Map<string, number>(); // text → timestamp
@@ -567,7 +567,11 @@ async function addToSOP(title: string, workspace: string, sopFile: string, hintO
     const prefix = hintOnly ? "SOP-Hinweis" : "SOP";
     await git.commit(`${prefix} ${sopFile.replace(".md", "")}: ${title} (Quelle: Spracheingabe ${today})`);
 
-    try { await git.push(); } catch {}
+    try {
+      await git.push();
+      // Signal local clients to pull the vault update
+      broadcastVaultPull();
+    } catch {}
 
     return { success: true };
   } catch (err) {

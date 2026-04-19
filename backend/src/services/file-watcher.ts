@@ -107,3 +107,7 @@ export function broadcastApiUpdate(source: "calendar" | "todoist" | "habitica"):
 export function broadcastVaultChanged(filePath: string): void {
   broadcast({ type: "vault-changed", file: filePath, priority: "high" });
 }
+
+export function broadcastVaultPull(): void {
+  broadcast({ type: "vault-pull" });
+}
