@@ -724,8 +724,14 @@ export async function processInboxMessage(text: string): Promise<InboxResult> {
   }
   if (successTypes.has("complete")) {
     try {
-      broadcastApiUpdate("habitica"); // "habitica" is the cache key the frontend listens to for habits
+      broadcastApiUpdate("habitica");
       console.log("[Inbox] Habits broadcast triggered");
+    } catch {}
+  }
+  if (successTypes.has("sop") || successTypes.has("sop_hint")) {
+    try {
+      broadcastApiUpdate("vault-changed");
+      console.log("[Inbox] SOP broadcast triggered");
     } catch {}
   }
 
